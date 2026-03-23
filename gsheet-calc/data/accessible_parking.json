@@ -1,0 +1,85 @@
+{
+  "_metadata": {
+    "description": "Accessible parking requirements per CBC Chapter 11A/11B",
+    "authority": "CBC 11B-208, 11B-228.3, 11B-812",
+    "code_cycle": "2025 CBC",
+    "last_reviewed": "2026-03-20",
+    "notes": "Scoping is per parking facility. Residential (11A) and commercial/common (11B) calculated separately."
+  },
+  "commercial_table_11B_208_2": {
+    "description": "Table 11B-208.2 - Accessible spaces per parking facility (non-residential / common area)",
+    "authority_id": "AUTH-ACC-COM",
+    "tiers": [
+      {"total_min": 1, "total_max": 25, "accessible_required": 1},
+      {"total_min": 26, "total_max": 50, "accessible_required": 2},
+      {"total_min": 51, "total_max": 75, "accessible_required": 3},
+      {"total_min": 76, "total_max": 100, "accessible_required": 4},
+      {"total_min": 101, "total_max": 150, "accessible_required": 5},
+      {"total_min": 151, "total_max": 200, "accessible_required": 6},
+      {"total_min": 201, "total_max": 300, "accessible_required": 7},
+      {"total_min": 301, "total_max": 400, "accessible_required": 8},
+      {"total_min": 401, "total_max": 500, "accessible_required": 9},
+      {"total_min": 501, "total_max": 1000, "accessible_formula": "0.02 * total"},
+      {"total_min": 1001, "total_max": null, "accessible_formula": "20 + floor((total - 1000) / 100)"}
+    ]
+  },
+  "residential_11B_208_2_3": {
+    "description": "Residential accessible parking per CBC 11B-208.2.3",
+    "authority_id": "AUTH-ACC-RES",
+    "rules": {
+      "per_mobility_unit": {
+        "description": "Where 1+ space per unit: 1 accessible per mobility-accessible unit (11B-208.2.3.1)",
+        "code_section": "CBC 11B-208.2.3.1"
+      },
+      "additional_spaces": {
+        "description": "Additional spaces beyond 1:1 ratio: 2% of additional, min 1 (11B-208.2.3.2)",
+        "code_section": "CBC 11B-208.2.3.2",
+        "percent": 0.02,
+        "minimum": 1
+      },
+      "mobility_unit_rate": {
+        "description": "Typically 5% of total units for publicly funded housing",
+        "notes": "Input-dependent; not auto-calculated unless mobility_accessible_units provided"
+      }
+    }
+  },
+  "van_accessible": {
+    "description": "Van accessible spaces per CBC 11B-208.2.4",
+    "authority_id": "AUTH-ACC-VAN",
+    "ratio": "1 per 6 accessible (or fraction), minimum 1",
+    "divisor": 6,
+    "minimum": 1,
+    "dimensions": {
+      "min_width_ft": 17,
+      "configurations": [
+        {"stall_ft": 12, "aisle_ft": 5},
+        {"stall_ft": 9, "aisle_ft": 8}
+      ],
+      "min_vertical_clearance_in": 98
+    },
+    "code_section": "CBC 11B-208.2.4, 11B-502.2"
+  },
+  "evcs_accessible_11B_228_3": {
+    "description": "Accessible EVCS requirements per CBC 11B-228.3",
+    "authority_id": "AUTH-ACC-EVCS",
+    "rules": {
+      "scoping": "Per combination of charging level + connector type (each is a separate 'facility')",
+      "table_reference": "Table 11B-228.3.2.1",
+      "first_evcs_van_accessible": true,
+      "van_accessible_width_in": 144,
+      "code_section": "CBC 11B-228.3, 11B-812.6.1"
+    },
+    "table_11B_228_3_2_1": {
+      "description": "TODO: Full table values need verification against 2025 CBC publication",
+      "authority_gap": true,
+      "tiers": [
+        {"evcs_min": 1, "evcs_max": 4, "accessible_required": 1},
+        {"evcs_min": 5, "evcs_max": 25, "accessible_required": 2},
+        {"evcs_min": 26, "evcs_max": 50, "accessible_required": 3},
+        {"evcs_min": 51, "evcs_max": 100, "accessible_required": 4},
+        {"evcs_min": 101, "evcs_max": null, "accessible_formula": "4 + floor((total - 100) / 50)"}
+      ],
+      "notes": "TODO: Verify tier breakpoints against published 2025 CBC Table 11B-228.3.2.1"
+    }
+  }
+}

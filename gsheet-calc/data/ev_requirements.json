@@ -1,0 +1,22 @@
+{
+  "_metadata": {
+    "description": "EV parking requirements per 2025 CALGreen for multifamily residential",
+    "authority": "2025 CALGreen Section 4.106.4.2.2",
+    "code_cycle": "2025 CALGreen",
+    "last_reviewed": "2026-03-20"
+  },
+  "multifamily": {
+    "authority_id": "AUTH-EV-MF",
+    "code_section": "CALGreen 4.106.4.2.2",
+    "assigned": {
+      "description": "Assigned parking: 1 EV receptacle per dwelling unit at assigned space",
+      "receptacles_per_unit": 1
+    },
+    "unassigned": {
+      "description": "Unassigned/common parking: 1 receptacle per unit + 25% of remaining common spaces with installed EVSE",
+      "receptacles_per_unit": 1,
+      "common_remaining_evse_pct": 0.25,
+      "notes": "If assigned/unassigned split not provided, generate review issue."
+    }
+  }
+}

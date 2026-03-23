@@ -1,0 +1,19 @@
+{
+  "_metadata": {
+    "description": "Loading space requirements per LAMC 12.21 C.6",
+    "authority": "LAMC Section 12.21 C.6",
+    "code_cycle": "LAMC Rev. 7",
+    "last_reviewed": "2026-03-20"
+  },
+  "loading": {
+    "authority_id": "AUTH-LOAD",
+    "code_section": "LAMC 12.21 C.6",
+    "required_zones": ["RAS3", "R4", "RAS4", "R5"],
+    "min_area_sf": 400,
+    "condition": "Lot abuts an improved alley",
+    "exemption": {
+      "description": "Apartment buildings with fewer than 30 units are exempt",
+      "max_exempt_units": 29
+    }
+  }
+}

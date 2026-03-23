@@ -1,0 +1,234 @@
+{
+  "_metadata": {
+    "description": "Zone-based density factors, minimum lot areas, and setback defaults for LA City zones",
+    "authority": "LAMC Section 12.04 et seq.",
+    "code_cycle": "LAMC Rev. 7",
+    "last_reviewed": "2026-03-20",
+    "notes": "Chapter 1 zones. Chapter 1A zones require separate lookup and generate a review issue."
+  },
+  "zones": {
+    "R1": {
+      "density_factor_sf": 5000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 20,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-R1",
+      "notes": "One-Family Zone"
+    },
+    "R2": {
+      "density_factor_sf": 2500,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 20,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-R2",
+      "notes": "Two-Family Zone"
+    },
+    "RD1.5": {
+      "density_factor_sf": 1500,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "RD2": {
+      "density_factor_sf": 2000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "RD3": {
+      "density_factor_sf": 3000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "RD4": {
+      "density_factor_sf": 4000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "RD5": {
+      "density_factor_sf": 5000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "RD6": {
+      "density_factor_sf": 6000,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RD",
+      "notes": "Restricted Density Multiple Dwelling Zone"
+    },
+    "R3": {
+      "density_factor_sf": 800,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-R3",
+      "notes": "Multiple Dwelling Zone"
+    },
+    "RAS3": {
+      "density_factor_sf": 800,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RAS3",
+      "notes": "Residential/Accessory Services Zone"
+    },
+    "R4": {
+      "density_factor_sf": 400,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-R4",
+      "notes": "Multiple Dwelling Zone"
+    },
+    "RAS4": {
+      "density_factor_sf": 400,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-RAS4",
+      "notes": "Residential/Accessory Services Zone"
+    },
+    "R5": {
+      "density_factor_sf": 200,
+      "min_lot_area_sf": 5000,
+      "setbacks": {
+        "front_ft": 15,
+        "side_ft": 5,
+        "rear_ft": 15
+      },
+      "authority_id": "AUTH-ZONE-R5",
+      "notes": "Multiple Dwelling Zone"
+    },
+    "C1": {
+      "density_factor_sf": 800,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "authority_id": "AUTH-ZONE-C1",
+      "notes": "Limited Commercial Zone. Residential uses per R3 density."
+    },
+    "C1.5": {
+      "density_factor_sf": 400,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "authority_id": "AUTH-ZONE-C15",
+      "notes": "Limited Commercial Zone. Residential uses per R4 density."
+    },
+    "C2": {
+      "density_factor_sf": 400,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "residential_buildable_equals_lot": true,
+      "authority_id": "AUTH-ZONE-C2",
+      "notes": "Commercial Zone. Residential buildable area = lot area exception applies."
+    },
+    "C4": {
+      "density_factor_sf": 400,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "residential_buildable_equals_lot": true,
+      "authority_id": "AUTH-ZONE-C4",
+      "notes": "Commercial Zone. Residential buildable area = lot area exception applies."
+    },
+    "C5": {
+      "density_factor_sf": 200,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "residential_buildable_equals_lot": true,
+      "authority_id": "AUTH-ZONE-C5",
+      "notes": "Commercial Zone. Residential buildable area = lot area exception applies."
+    },
+    "CM": {
+      "density_factor_sf": null,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "authority_id": "AUTH-ZONE-CM",
+      "notes": "TODO: Commercial Manufacturing Zone. Residential density rules vary. Authority gap - requires manual review."
+    },
+    "M1": {
+      "density_factor_sf": null,
+      "min_lot_area_sf": null,
+      "setbacks": {
+        "front_ft": 0,
+        "side_ft": 0,
+        "rear_ft": 0
+      },
+      "authority_id": "AUTH-ZONE-M1",
+      "notes": "TODO: Limited Industrial Zone. Residential typically not permitted unless via overlay or incentive. Authority gap."
+    }
+  }
+}

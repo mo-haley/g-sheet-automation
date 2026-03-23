@@ -1,0 +1,56 @@
+{
+  "_metadata": {
+    "description": "Auto parking ratios for residential and commercial uses in LA City",
+    "authority": "LAMC Section 12.21 A.4",
+    "code_cycle": "LAMC Rev. 7",
+    "last_reviewed": "2026-03-20",
+    "notes": "Residential parking based on habitable rooms per dwelling unit."
+  },
+  "residential": {
+    "description": "Per dwelling unit by habitable room count",
+    "authority_id": "AUTH-PARK-RES",
+    "tiers": [
+      {
+        "label": "Less than 3 habitable rooms",
+        "habitable_rooms_max": 2,
+        "spaces_per_unit": 1.0
+      },
+      {
+        "label": "3 habitable rooms",
+        "habitable_rooms_exact": 3,
+        "spaces_per_unit": 1.5
+      },
+      {
+        "label": "More than 3 habitable rooms",
+        "habitable_rooms_min": 4,
+        "spaces_per_unit": 2.0
+      }
+    ]
+  },
+  "commercial": {
+    "description": "Selected commercial use parking ratios",
+    "authority_id": "AUTH-PARK-COM",
+    "uses": {
+      "retail": {
+        "ratio": 4.0,
+        "per_unit": "1000 sf",
+        "notes": "General retail / mercantile"
+      },
+      "office": {
+        "ratio": 2.0,
+        "per_unit": "1000 sf",
+        "notes": "Business / professional office"
+      },
+      "restaurant": {
+        "ratio": 10.0,
+        "per_unit": "1000 sf",
+        "notes": "Eating and drinking establishment"
+      },
+      "medical_office": {
+        "ratio": 4.0,
+        "per_unit": "1000 sf",
+        "notes": "Medical / dental office"
+      }
+    }
+  }
+}

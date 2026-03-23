@@ -1,0 +1,28 @@
+{
+  "_metadata": {
+    "description": "Open space requirements per LAMC 12.21 G",
+    "authority": "LAMC Section 12.21 G",
+    "code_cycle": "LAMC Rev. 7",
+    "last_reviewed": "2026-03-20"
+  },
+  "residential": {
+    "authority_id": "AUTH-OS-RES",
+    "code_section": "LAMC 12.21 G",
+    "threshold_units": 6,
+    "per_unit": {
+      "less_than_3_habitable_rooms_sf": 100,
+      "3_or_more_habitable_rooms_sf": 125
+    },
+    "private_credit": {
+      "description": "Private open space (balconies, patios) may substitute for common at reduced rate",
+      "min_dimension_ft": 6,
+      "min_area_sf": 50,
+      "max_credit_pct": 0.50,
+      "notes": "50 sf private = 50 sf common credit up to 50% of total requirement"
+    },
+    "common_open_space": {
+      "min_dimension_ft": 20,
+      "notes": "Common areas must have minimum 20' dimension in each direction"
+    }
+  }
+}

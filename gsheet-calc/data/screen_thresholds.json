@@ -1,0 +1,118 @@
+{
+  "_metadata": {
+    "description": "Screening thresholds for advisory pathway eligibility checks",
+    "authority": "Various - see per-screen authority_id references",
+    "code_cycle": "2025 CBC / LAMC Rev. 7",
+    "last_reviewed": "2026-03-20",
+    "disclaimer": "Screening thresholds only. Not binding entitlement determinations."
+  },
+  "toc": {
+    "authority_id": "AUTH-TOC",
+    "description": "Transit Oriented Communities incentive tiers",
+    "code_section": "LAMC 12.22 A.31",
+    "tiers": {
+      "1": {
+        "density_bonus_pct": 50,
+        "far_bonus_pct": 40,
+        "height_bonus_stories": 1,
+        "parking_reduction": "0.5 per unit",
+        "open_space_reduction_pct": 25
+      },
+      "2": {
+        "density_bonus_pct": 60,
+        "far_bonus_pct": 45,
+        "height_bonus_stories": 2,
+        "parking_reduction": "0.5 per unit",
+        "open_space_reduction_pct": 25
+      },
+      "3": {
+        "density_bonus_pct": 70,
+        "far_bonus_pct": 50,
+        "height_bonus_stories": 3,
+        "parking_reduction": "0.5 per unit",
+        "open_space_reduction_pct": 25
+      },
+      "4": {
+        "density_bonus_pct": 80,
+        "far_bonus_pct": 55,
+        "height_bonus_stories": 3,
+        "parking_reduction": "0.5 per unit",
+        "open_space_reduction_pct": 25
+      }
+    },
+    "notes": "TOC may conflict with specific plans. Specific plan conflicts generate review issues."
+  },
+  "density_bonus": {
+    "authority_id": "AUTH-DB",
+    "description": "State Density Bonus Law sliding scales",
+    "code_section": "Government Code 65915",
+    "set_asides": {
+      "very_low_income": {
+        "base_pct": 5,
+        "base_bonus_pct": 20,
+        "incremental_pct_per_1pct": 2.5,
+        "max_set_aside_pct": 15,
+        "max_bonus_pct": 50
+      },
+      "low_income": {
+        "base_pct": 10,
+        "base_bonus_pct": 20,
+        "incremental_pct_per_1pct": 1.5,
+        "max_set_aside_pct": 24,
+        "max_bonus_pct": 50
+      },
+      "moderate_income_for_sale": {
+        "base_pct": 10,
+        "base_bonus_pct": 5,
+        "incremental_pct_per_1pct": 1.0,
+        "max_set_aside_pct": 40,
+        "max_bonus_pct": 35
+      }
+    },
+    "concessions": {
+      "description": "Incentives/concessions by set-aside level",
+      "notes": "Number of concessions depends on affordable set-aside percentage."
+    },
+    "sb92_commercial_far_cap": {
+      "description": "SB 92 caps commercial FAR in density bonus projects",
+      "effective_date": "2026-01-01",
+      "notes": "Applies to applications filed on or after 1/1/2026. Advisory flag only."
+    },
+    "ab1287_stacking": {
+      "description": "AB 1287 allows stacking state DB with local incentives",
+      "notes": "Advisory screening note. Eligibility depends on project specifics."
+    }
+  },
+  "affordable_100pct": {
+    "authority_id": "AUTH-AFF100",
+    "description": "100% Affordable housing streamlining (AB 2334 / AB 1763)",
+    "requirements": {
+      "affordability": "100% affordable (excluding manager units)",
+      "transit_proximity": "Within 0.5 mile of major transit stop",
+      "low_vmt": "Low vehicle miles traveled area",
+      "notes": "Potential unlimited density + height + concessions. Requires VMT and transit verification."
+    },
+    "missing_input_flags": [
+      "vmt_area_status",
+      "transit_proximity_verified"
+    ]
+  },
+  "streamlining": {
+    "sb423": {
+      "authority_id": "AUTH-SB423",
+      "description": "SB 423 (Builder's Remedy) streamlining",
+      "notes": "Eligibility depends on HCD housing element compliance determination. Do not hard-code city compliance status.",
+      "check": "Point to HCD determination status for current jurisdiction."
+    },
+    "ab2011": {
+      "authority_id": "AUTH-AB2011",
+      "description": "AB 2011 commercial corridor housing",
+      "notes": "Applicable if site fronts commercial corridor with qualifying zoning. Advisory screen only.",
+      "requirements": [
+        "Commercial corridor frontage",
+        "Prevailing wage commitment",
+        "Affordability set-aside"
+      ]
+    }
+  }
+}

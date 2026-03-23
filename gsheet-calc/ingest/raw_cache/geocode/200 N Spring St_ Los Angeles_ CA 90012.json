@@ -1,0 +1,23 @@
+[
+  {
+    "place_id": 296420045,
+    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 6333145,
+    "lat": "34.0536961",
+    "lon": "-118.2429212",
+    "class": "building",
+    "type": "civic",
+    "place_rank": 30,
+    "importance": 0.43670582978997596,
+    "addresstype": "building",
+    "name": "Los Angeles City Hall",
+    "display_name": "Los Angeles City Hall, 200, North Spring Street, Civic Center, Downtown, Los Angeles, Los Angeles County, California, 90012, United States",
+    "boundingbox": [
+      "34.0530141",
+      "34.0543713",
+      "-118.2435300",
+      "-118.2420052"
+    ]
+  }
+]

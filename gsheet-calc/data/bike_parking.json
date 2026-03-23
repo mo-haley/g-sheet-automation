@@ -1,0 +1,42 @@
+{
+  "_metadata": {
+    "description": "Bicycle parking requirements for LA City",
+    "authority": "LAMC Section 12.21 A.16",
+    "code_cycle": "LAMC Rev. 7",
+    "last_reviewed": "2026-03-20"
+  },
+  "residential": {
+    "description": "Residential buildings with more than 3 dwelling units",
+    "authority_id": "AUTH-BIKE-RES",
+    "threshold_units": 3,
+    "long_term_per_unit": 1,
+    "short_term_per_units": 10,
+    "short_term_minimum": 2,
+    "code_section": "LAMC 12.21 A.16(a)(1)"
+  },
+  "commercial": {
+    "description": "Commercial bicycle parking ratios",
+    "authority_id": "AUTH-BIKE-COM",
+    "code_section": "LAMC 12.21 A.16(a)(2)",
+    "notes": "TODO: Full commercial table needs verification. Placeholder entries below.",
+    "authority_gap": true,
+    "uses": {
+      "retail": {
+        "long_term_per_sf": 0.0005,
+        "short_term_per_sf": 0.0005,
+        "notes": "TODO: Verify ratio against Table 12.21.A.16(a)(2)"
+      },
+      "office": {
+        "long_term_per_sf": 0.0003,
+        "short_term_per_sf": 0.0001,
+        "notes": "TODO: Verify ratio against Table 12.21.A.16(a)(2)"
+      }
+    }
+  },
+  "auto_replacement": {
+    "description": "Bicycle parking may substitute for up to a percentage of required auto parking",
+    "authority_id": "AUTH-BIKE-REPLACE",
+    "notes": "Noted but not auto-applied in deterministic layer. Advisory only.",
+    "code_section": "LAMC 12.21 A.16(d)"
+  }
+}
