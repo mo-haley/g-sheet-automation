@@ -116,6 +116,21 @@ def detect_linked_docs(
             )
         )
 
+    # ── Parse-trust gate for Q/D ordinance numbers ───────────────────────────
+    # Zone-string-derived ordinance numbers (q_ordinance_number, d_ordinance_number)
+    # are only trusted when the parse that produced them was not 'unresolved'.
+    # When parse confidence is 'unresolved', passing these as source_ordinance_number
+    # would allow confidence.py to upgrade Q/D identity on a failed parse result.
+    # The candidates themselves are still created — over-detection policy applies —
+    # but without a trusted ordinance reference.
+    # Suppression warnings are emitted in section 4 alongside the parse error.
+    _q_trusted_ord: str | None = (
+        None if inp.zoning_parse_confidence == "unresolved" else inp.q_ordinance_number
+    )
+    _d_trusted_ord: str | None = (
+        None if inp.zoning_parse_confidence == "unresolved" else inp.d_ordinance_number
+    )
+
     # ── 1. Structured Site fields ─────────────────────────────────────────────
 
     if inp.specific_plan:
@@ -126,11 +141,21 @@ def detect_linked_docs(
             notes="Specific plan name from Site.specific_plan field.",
         )
         if inp.specific_plan_subarea:
+            # Emit a second candidate for the SAME plan using the SAME raw_value
+            # (the plan name, not a "plan / subarea" combined string). The classifier
+            # deduplicates by (doc_type, label) and will merge this into the first
+            # record, adding "specific_plan_subarea" to detected_from_fields.
+            # This preserves provenance without creating a confusingly-labelled
+            # second record. Subarea context is carried in NarrowingContext.
             _add(
                 source_field="specific_plan_subarea",
-                raw_value=f"{inp.specific_plan} / {inp.specific_plan_subarea}",
+                raw_value=inp.specific_plan,
                 detected_pattern=PATTERN_SPECIFIC_PLAN_FIELD,
-                notes="Subarea from Site.specific_plan_subarea field.",
+                notes=(
+                    f"Subarea '{inp.specific_plan_subarea}' present in "
+                    "Site.specific_plan_subarea field. "
+                    "Subarea context preserved in NarrowingContext."
+                ),
             )
 
     for oz in inp.overlay_zones:
@@ -151,7 +176,7 @@ def detect_linked_docs(
             raw_value=qc,
             detected_pattern=PATTERN_Q_CONDITION_FIELD,
             notes="Q condition from Site.q_conditions list.",
-            source_ordinance_number=inp.q_ordinance_number,
+            source_ordinance_number=_q_trusted_ord,
         )
 
     for dl in inp.d_limitations:
@@ -162,7 +187,7 @@ def detect_linked_docs(
             raw_value=dl,
             detected_pattern=PATTERN_D_LIMITATION_FIELD,
             notes="D limitation from Site.d_limitations list.",
-            source_ordinance_number=inp.d_ordinance_number,
+            source_ordinance_number=_d_trusted_ord,
         )
 
     # ── 2. Raw ZIMAS identify response — scan non-parcel layers ──────────────
@@ -314,6 +339,50 @@ def detect_linked_docs(
                         confidence_impact="none",
                     )
                 )
+        # Warn when ordinance numbers were present but suppressed due to
+        # unresolved parse confidence. The numbers are not discarded from
+        # inp — they remain on ZimasLinkedDocInput for caller inspection —
+        # but they are not forwarded as trusted source_ordinance_number on
+        # Q/D candidates. This prevents confidence.py from upgrading Q/D
+        # identity based on an ordinance reference from a failed parse.
+        if inp.q_ordinance_number:
+            issues.append(
+                ZimasDocIssue(
+                    step="link_detector",
+                    field="q_ordinance_number",
+                    severity="warning",
+                    message=(
+                        f"Q ordinance number '{inp.q_ordinance_number}' was present "
+                        "but zone string parse confidence is 'unresolved'. "
+                        "Ordinance number not forwarded as trusted Q identity — "
+                        "an unresolved parse cannot reliably support document identity."
+                    ),
+                    action_required=(
+                        "Verify Q ordinance number from a source independent of "
+                        "the zone string parse."
+                    ),
+                    confidence_impact="none",
+                )
+            )
+        if inp.d_ordinance_number:
+            issues.append(
+                ZimasDocIssue(
+                    step="link_detector",
+                    field="d_ordinance_number",
+                    severity="warning",
+                    message=(
+                        f"D ordinance number '{inp.d_ordinance_number}' was present "
+                        "but zone string parse confidence is 'unresolved'. "
+                        "Ordinance number not forwarded as trusted D identity — "
+                        "an unresolved parse cannot reliably support document identity."
+                    ),
+                    action_required=(
+                        "Verify D ordinance number from a source independent of "
+                        "the zone string parse."
+                    ),
+                    confidence_impact="none",
+                )
+            )
 
     # Gap-fill D limitation: parser detected it but normalizer bracket-scan missed it
     # (covers inline-D suffix like C2-2D where [D] bracket is absent)
@@ -326,7 +395,7 @@ def detect_linked_docs(
                 "D limitation detected by zone string parser (inline-D suffix). "
                 "Not present in Site.d_limitations — normalizer bracket-scan missed it."
             ),
-            source_ordinance_number=inp.d_ordinance_number,
+            source_ordinance_number=_d_trusted_ord,
         )
 
     # Gap-fill Q condition: parser detected it but normalizer bracket-scan missed it
@@ -339,7 +408,7 @@ def detect_linked_docs(
                 "Q condition detected by zone string parser. "
                 "Not present in Site.q_conditions — normalizer bracket-scan missed it."
             ),
-            source_ordinance_number=inp.q_ordinance_number,
+            source_ordinance_number=_q_trusted_ord,
         )
 
     # Supplemental districts from parse not already covered by overlay_zones

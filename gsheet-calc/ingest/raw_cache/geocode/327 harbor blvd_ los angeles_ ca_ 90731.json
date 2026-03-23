@@ -1,0 +1,23 @@
+[
+  {
+    "place_id": 385747600,
+    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+    "osm_type": "way",
+    "osm_id": 999502644,
+    "lat": "33.7452922",
+    "lon": "-118.2798048",
+    "class": "place",
+    "type": "house",
+    "place_rank": 30,
+    "importance": 9.99999999995449e-06,
+    "addresstype": "place",
+    "name": "",
+    "display_name": "327, North Harbor Boulevard, San Pedro, Los Angeles, Los Angeles County, California, 90731, United States",
+    "boundingbox": [
+      "33.7452422",
+      "33.7453422",
+      "-118.2798548",
+      "-118.2797548"
+    ]
+  }
+]

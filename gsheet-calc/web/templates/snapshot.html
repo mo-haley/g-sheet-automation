@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ vm.site_summary.address }} — Feasibility Snapshot</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; font-size: 14px; line-height: 1.5; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+    /* Header */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .header h1 { font-size: 1.4rem; color: #1a1a1a; }
+    .header .meta { font-size: 0.75rem; color: #888; text-align: right; }
+    .header .meta span { display: block; }
+
+    /* Actions */
+    .actions { display: flex; gap: 12px; margin-bottom: 24px; }
+    .btn { display: inline-block; padding: 10px 24px; border-radius: 5px; font-size: 0.85rem; font-weight: 600; text-decoration: none; border: none; cursor: pointer; }
+    .btn-primary { background: #2F5496; color: #fff; }
+    .btn-primary:hover { background: #1d3a6a; }
+    .btn-outline { background: #fff; color: #2F5496; border: 1px solid #2F5496; }
+    .btn-outline:hover { background: #f0f4fa; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card h2 { font-size: 1.05rem; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #2F5496; color: #2F5496; }
+    .card h3 { font-size: 0.9rem; color: #555; margin: 16px 0 8px; }
+
+    /* Section numbering */
+    .section-num { display: inline-block; background: #2F5496; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; font-size: 0.7rem; line-height: 22px; margin-right: 8px; font-weight: 700; }
+
+    /* Pills */
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+    .pill-high, .pill-confirmed { background: #e8f5e9; color: #2e7d32; }
+    .pill-moderate, .pill-preliminary { background: #fff8e1; color: #f57f17; }
+    .pill-thin { background: #fff3e0; color: #e65100; }
+    .pill-interrupted, .pill-unresolved { background: #fce4ec; color: #c62828; }
+    .pill-authority { background: #f3e5f5; color: #7b1fa2; }
+
+    /* Coverage badge */
+    .coverage-badge { display: inline-block; padding: 4px 14px; border-radius: 14px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.02em; }
+    .coverage-High { background: #e8f5e9; color: #2e7d32; }
+    .coverage-Moderate { background: #fff8e1; color: #f57f17; }
+    .coverage-Thin { background: #fff3e0; color: #e65100; }
+    .coverage-Interrupted { background: #fce4ec; color: #c62828; }
+
+    /* Summary card */
+    .summary-card { border-left: 4px solid #2F5496; }
+    .summary-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .summary-run-type { font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .summary-sentence { font-size: 0.9rem; color: #444; line-height: 1.6; }
+
+    /* Signals */
+    .signal-list { list-style: none; padding: 0; }
+    .signal-list li { padding: 8px 12px; margin-bottom: 6px; border-radius: 5px; font-size: 0.85rem; border-left: 3px solid #ccc; }
+    .signal-opportunity { background: #f1f8e9; border-left-color: #689f38; }
+    .signal-risk { background: #fff3e0; border-left-color: #ef6c00; }
+    .signal-uncertainty { background: #e3f2fd; border-left-color: #1565c0; }
+    .signal-neutral { background: #f5f5f5; border-left-color: #9e9e9e; }
+
+    /* Observed fields grid */
+    .observed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 32px; }
+    .observed-grid dt { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+    .observed-grid dd { font-size: 0.88rem; color: #222; margin-bottom: 8px; }
+
+    /* Module coverage table */
+    .coverage-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 16px; }
+    .coverage-table th { text-align: left; font-weight: 600; color: #666; padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 0.7rem; text-transform: uppercase; }
+    .coverage-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .coverage-table .note { font-size: 0.78rem; color: #666; }
+
+    /* Scenario table */
+    .scenario-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .scenario-table th { text-align: left; font-weight: 600; color: #666; padding: 8px; border-bottom: 2px solid #ddd; font-size: 0.7rem; text-transform: uppercase; white-space: nowrap; }
+    .scenario-table td { padding: 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .scenario-table tr:last-child td { border-bottom: none; }
+    .scenario-name { font-weight: 600; color: #222; }
+
+    /* Relevance pills */
+    .rel-Yes { background: #e8f5e9; color: #2e7d32; }
+    .rel-Possible { background: #fff8e1; color: #f57f17; }
+    .rel-No { background: #f5f5f5; color: #888; }
+    .rel-Unclear { background: #e3f2fd; color: #1565c0; }
+
+    /* Module cards */
+    .module-card { background: #f8f9fc; border-radius: 6px; padding: 16px; margin-bottom: 12px; border: 1px solid #e8ecf2; }
+    .module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .module-name { font-weight: 700; font-size: 0.95rem; color: #222; }
+    .module-section { margin-bottom: 8px; }
+    .module-section-label { font-size: 0.7rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+    .module-read { font-size: 0.85rem; color: #444; margin-bottom: 10px; }
+    .module-list { list-style: none; padding: 0; margin: 0; }
+    .module-list li { font-size: 0.8rem; color: #555; padding: 2px 0 2px 14px; position: relative; }
+    .module-list li::before { content: "-"; position: absolute; left: 0; color: #999; }
+    .sensitivity-bar { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .sensitivity-label { font-size: 0.7rem; color: #888; font-weight: 600; text-transform: uppercase; }
+    .sensitivity-Low { color: #2e7d32; }
+    .sensitivity-Moderate { color: #f57f17; }
+    .sensitivity-High { color: #c62828; }
+
+    /* ED1 screening */
+    .ed1-card { border-left: 4px solid #7b1fa2; }
+    .ed1-card.ed1-eligible { border-left-color: #2e7d32; }
+    .ed1-card.ed1-potentially { border-left-color: #f57f17; }
+    .ed1-card.ed1-ineligible { border-left-color: #c62828; }
+    .ed1-card.ed1-insufficient { border-left-color: #90a4ae; }
+    .ed1-status-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+    .ed1-badge-eligible { background: #e8f5e9; color: #2e7d32; }
+    .ed1-badge-potentially { background: #fff8e1; color: #f57f17; }
+    .ed1-badge-ineligible { background: #fce4ec; color: #c62828; }
+    .ed1-badge-insufficient { background: #eceff1; color: #546e7a; }
+    .ed1-section { margin-bottom: 14px; }
+    .ed1-section-label { font-size: 0.7rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+    .ed1-list { list-style: none; padding: 0; margin: 0; }
+    .ed1-list li { font-size: 0.82rem; color: #555; padding: 3px 0 3px 14px; position: relative; }
+    .ed1-list li::before { content: "-"; position: absolute; left: 0; color: #999; }
+    .ed1-blocker-item { background: #fce4ec; border-left: 3px solid #c62828; padding: 6px 10px; border-radius: 4px; margin-bottom: 4px; font-size: 0.82rem; color: #b71c1c; }
+    .ed1-missing-item { background: #fff8e1; border-left: 3px solid #f57f17; padding: 6px 10px; border-radius: 4px; margin-bottom: 4px; font-size: 0.82rem; color: #e65100; }
+    .ed1-disclaimer { font-size: 0.72rem; color: #999; font-style: italic; margin-top: 12px; padding-top: 8px; border-top: 1px solid #f0f0f0; }
+    .ed1-comparison dt { font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase; margin-top: 6px; }
+    .ed1-comparison dd { font-size: 0.82rem; color: #555; margin-bottom: 4px; }
+
+    /* Caveats */
+    .caveat-item { padding: 10px 12px; margin-bottom: 6px; border-radius: 5px; background: #fff3e0; border-left: 3px solid #ef6c00; }
+    .caveat-text { font-size: 0.85rem; font-weight: 600; color: #333; }
+    .caveat-consequence { font-size: 0.78rem; color: #666; margin-top: 2px; }
+
+    /* Missing inputs */
+    .input-group { margin-bottom: 16px; }
+    .input-group h3 { font-size: 0.85rem; color: #2F5496; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #eee; }
+    .input-item { padding: 6px 0; border-bottom: 1px solid #f5f5f5; }
+    .input-item:last-child { border-bottom: none; }
+    .input-name { font-size: 0.85rem; font-weight: 600; color: #333; }
+    .input-why { font-size: 0.78rem; color: #666; }
+    .input-modules { font-size: 0.7rem; color: #2F5496; margin-top: 1px; }
+
+    /* Sources */
+    .source-item { display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.82rem; }
+    .source-item:last-child { border-bottom: none; }
+    .source-label { font-weight: 600; color: #555; min-width: 160px; flex-shrink: 0; }
+    .source-detail { color: #666; }
+
+    /* Footer */
+    .disclaimer { font-size: 0.7rem; color: #999; text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-style: italic; }
+
+    /* Print */
+    @media print {
+      body { background: #fff; font-size: 11px; }
+      .container { max-width: 100%; padding: 0; }
+      .actions { display: none; }
+      .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+    }
+
+    @media (max-width: 700px) {
+      .observed-grid { grid-template-columns: 1fr; }
+      .scenario-table { font-size: 0.72rem; }
+      .scenario-table th, .scenario-table td { padding: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>Address-Only Feasibility Snapshot</h1>
+        <div style="font-size: 0.85rem; color: #555; margin-top: 2px;">{{ vm.site_summary.address }}</div>
+      </div>
+      <div class="meta">
+        <span>{{ tool_version }}</span>
+        <span>{{ code_cycle }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <a href="/" class="btn btn-outline">New Analysis</a>
+      <button onclick="window.print()" class="btn btn-outline">Print / PDF</button>
+    </div>
+
+    <!-- 1. Site Feasibility Snapshot -->
+    <div class="card summary-card">
+      <h2><span class="section-num">1</span>Site Feasibility Snapshot</h2>
+      <div class="summary-top">
+        <span class="summary-run-type">{{ vm.site_summary.run_type }}</span>
+        <span class="coverage-badge coverage-{{ vm.site_summary.coverage_label.value }}">{{ vm.site_summary.coverage_label.value }}</span>
+      </div>
+      <p class="summary-sentence">{{ vm.site_summary.summary_sentence }}</p>
+      {% if vm.site_summary.authority_flags %}
+      <div style="margin-top: 12px; padding: 8px 12px; background: #f3e5f5; border-radius: 5px; border-left: 3px solid #7b1fa2;">
+        <div style="font-size: 0.7rem; font-weight: 600; color: #7b1fa2; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px;">Authority Confirmation Needed</div>
+        {% for flag in vm.site_summary.authority_flags %}
+        <div style="font-size: 0.82rem; color: #4a148c;">{{ flag }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- 2. Key Signals -->
+    {% if vm.signals %}
+    <div class="card">
+      <h2><span class="section-num">2</span>Key Signals</h2>
+      <ul class="signal-list">
+        {% for signal in vm.signals %}
+        <li class="signal-{{ signal.tone }}">{{ signal.text }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- 3. Observed Site Data -->
+    <div class="card">
+      <h2><span class="section-num">3</span>Observed Site Data</h2>
+      <dl class="observed-grid">
+        {% for field in vm.observed_fields %}
+        <dt>{{ field.label }}</dt>
+        <dd>{{ field.value }}</dd>
+        {% endfor %}
+      </dl>
+
+      <h3>Module Coverage</h3>
+      <table class="coverage-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Module</th>
+            <th style="width: 25%;">Status</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mc in vm.module_coverage %}
+          <tr>
+            <td>{{ mc.module_name }}</td>
+            <td>
+              {% if mc.status.value == "Confirmed from site data" %}
+              <span class="pill pill-confirmed">{{ mc.status.value }}</span>
+              {% elif mc.status.value == "Preliminary" %}
+              <span class="pill pill-preliminary">{{ mc.status.value }}</span>
+              {% elif mc.status.value == "Thin" %}
+              <span class="pill pill-thin">{{ mc.status.value }}</span>
+              {% elif mc.status.value == "Unresolved" %}
+              <span class="pill pill-unresolved">{{ mc.status.value }}</span>
+              {% elif mc.status.value == "Authority check required" %}
+              <span class="pill pill-authority">{{ mc.status.value }}</span>
+              {% endif %}
+            </td>
+            <td class="note">{{ mc.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 4. Scenario Comparison -->
+    <div class="card">
+      <h2><span class="section-num">4</span>Scenario Comparison</h2>
+      <div style="overflow-x: auto;">
+        <table class="scenario-table">
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Why Shown</th>
+              <th>Relevant?</th>
+              <th>Likely Effect</th>
+              <th>Key Unknowns</th>
+              <th>Next Input</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in vm.scenarios %}
+            <tr>
+              <td class="scenario-name">{{ row.scenario }}</td>
+              <td>{{ row.why_shown }}</td>
+              <td><span class="pill rel-{{ row.appears_relevant.value }}">{{ row.appears_relevant.value }}</span></td>
+              <td>{{ row.likely_effect }}</td>
+              <td>{{ row.key_unknowns }}</td>
+              <td>{{ row.next_input_needed }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 5. ED1 Screening (only shown when ED1 was run) -->
+    {% if vm.ed1_screening %}
+    <div class="card ed1-card ed1-{{ vm.ed1_screening.status_tone }}">
+      <h2><span class="section-num">5</span>ED1 Screening (100% Affordable)</h2>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="ed1-status-badge ed1-badge-{{ vm.ed1_screening.status_tone }}">{{ vm.ed1_screening.status_label }}</span>
+        <span style="font-size: 0.72rem; color: #888;">Confidence: {{ vm.ed1_screening.confidence_label }}</span>
+      </div>
+
+      <div style="font-size: 0.88rem; color: #444; margin-bottom: 14px;">{{ vm.ed1_screening.summary }}</div>
+
+      <!-- Why this result -->
+      <div class="ed1-section">
+        <div class="ed1-section-label">Why this result</div>
+        <div style="font-size: 0.85rem; color: #555;">{{ vm.ed1_screening.why_this_result }}</div>
+      </div>
+
+      <!-- Blockers -->
+      {% if vm.ed1_screening.blockers %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">Likely Blockers</div>
+        {% for b in vm.ed1_screening.blockers %}
+        <div class="ed1-blocker-item">{{ b }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Missing confirmations -->
+      {% if vm.ed1_screening.missing_confirmations %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">Missing Confirmations</div>
+        {% for m in vm.ed1_screening.missing_confirmations %}
+        <div class="ed1-missing-item">{{ m }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Obligations -->
+      {% if vm.ed1_screening.obligations %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">Key Obligations / Constraints</div>
+        <ul class="ed1-list">
+          {% for o in vm.ed1_screening.obligations %}
+          <li>{{ o }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- Constraints summary (only when not blocked) -->
+      {% if vm.ed1_screening.constraints_summary and vm.ed1_screening.status_tone != 'ineligible' %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">ED1 Incentive / Waiver Constraints</div>
+        <ul class="ed1-list">
+          {% for c in vm.ed1_screening.constraints_summary %}
+          <li>{{ c }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- Procedural benefits (only when not blocked) -->
+      {% if vm.ed1_screening.procedural_benefits and vm.ed1_screening.status_tone != 'ineligible' %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">Procedural Advantages if ED1 Applies</div>
+        <ul class="ed1-list">
+          {% for b in vm.ed1_screening.procedural_benefits %}
+          <li>{{ b }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- Baseline comparison -->
+      {% if vm.ed1_screening.baseline_comparison %}
+      <div class="ed1-section">
+        <div class="ed1-section-label">Baseline vs ED1 Comparison</div>
+        <dl class="ed1-comparison">
+          {% for key, val in vm.ed1_screening.baseline_comparison.items() %}
+          <dt>{{ key | replace("_", " ") | title }}</dt>
+          <dd>{{ val }}</dd>
+          {% endfor %}
+        </dl>
+      </div>
+      {% endif %}
+
+      <!-- Source and disclaimer -->
+      {% if vm.ed1_screening.source_basis %}
+      <div style="font-size: 0.72rem; color: #888; margin-top: 8px;">Source: {{ vm.ed1_screening.source_basis }}</div>
+      {% endif %}
+      {% if vm.ed1_screening.disclaimer %}
+      <div class="ed1-disclaimer">{{ vm.ed1_screening.disclaimer }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 6. Module Results -->
+    <div class="card">
+      <h2><span class="section-num">6</span>Module Results</h2>
+      {% for card in vm.module_cards %}
+      <div class="module-card">
+        <div class="module-header">
+          <span class="module-name">{{ card.module_name }}</span>
+          {% if card.status.value == "Confirmed from site data" %}
+          <span class="pill pill-confirmed">{{ card.status.value }}</span>
+          {% elif card.status.value == "Preliminary" %}
+          <span class="pill pill-preliminary">{{ card.status.value }}</span>
+          {% elif card.status.value == "Thin" %}
+          <span class="pill pill-thin">{{ card.status.value }}</span>
+          {% elif card.status.value == "Unresolved" %}
+          <span class="pill pill-unresolved">{{ card.status.value }}</span>
+          {% elif card.status.value == "Authority check required" %}
+          <span class="pill pill-authority">{{ card.status.value }}</span>
+          {% endif %}
+        </div>
+
+        <div class="module-read">{{ card.current_read }}</div>
+
+        {% if card.covers_now %}
+        <div class="module-section">
+          <div class="module-section-label">What this covers now</div>
+          <ul class="module-list">
+            {% for item in card.covers_now %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if card.depends_on_inputs %}
+        <div class="module-section">
+          <div class="module-section-label">What still depends on inputs</div>
+          <ul class="module-list">
+            {% for item in card.depends_on_inputs %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="sensitivity-bar">
+          <span class="sensitivity-label">Sensitivity:</span>
+          <span class="sensitivity-label sensitivity-{{ card.sensitivity.value }}">{{ card.sensitivity.value }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 7. Critical Caveats -->
+    {% if vm.caveats %}
+    <div class="card">
+      <h2><span class="section-num">7</span>Critical Caveats</h2>
+      {% for caveat in vm.caveats %}
+      <div class="caveat-item">
+        <div class="caveat-text">{{ caveat.text }}</div>
+        <div class="caveat-consequence">{{ caveat.consequence }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 8. Missing Inputs to Continue -->
+    <div class="card">
+      <h2><span class="section-num">8</span>Missing Inputs to Continue</h2>
+      {% if vm.best_next_inputs %}
+      <div style="background: #e8f5e9; border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #c8e6c9;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Best Next Inputs</div>
+        {% for item in vm.best_next_inputs %}
+        <div style="margin-bottom: 6px;">
+          <div style="font-size: 0.88rem; font-weight: 600; color: #1b5e20;">{{ item.name }}</div>
+          <div style="font-size: 0.78rem; color: #388e3c;">{{ item.why_it_matters }}</div>
+          {% if item.affects_modules %}
+          <div style="font-size: 0.7rem; color: #4caf50;">Affects: {{ item.affects_modules | join(", ") }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% for group in vm.missing_inputs %}
+      <div class="input-group">
+        <h3>{{ group.category }}</h3>
+        {% for item in group.items %}
+        <div class="input-item">
+          <div class="input-name">{{ item.name }}</div>
+          <div class="input-why">{{ item.why_it_matters }}</div>
+          {% if item.affects_modules %}
+          <div class="input-modules">Affects: {{ item.affects_modules | join(", ") }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 9. Sources / Authority Basis -->
+    <div class="card">
+      <h2><span class="section-num">9</span>Sources / Authority Basis</h2>
+      {% for src in vm.sources %}
+      <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span style="font-weight: 600; font-size: 0.85rem; color: #333;">{{ src.source_type }}</span>
+        </div>
+        <div style="font-size: 0.78rem; color: #555; margin-top: 2px;">Informed: {{ src.informed }}</div>
+        <div style="font-size: 0.75rem; color: #888; margin-top: 1px;">{{ src.detail }}</div>
+        {% if src.limitation %}
+        <div style="font-size: 0.72rem; color: #b71c1c; margin-top: 2px; font-style: italic;">{{ src.limitation }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if not vm.sources %}
+      <div style="font-size: 0.85rem; color: #666; font-style: italic;">No source provenance recorded for this run.</div>
+      {% endif %}
+    </div>
+
+    <p class="disclaimer">
+      Address-only preliminary screening. Not for final code determination without project inputs and professional review.<br>
+      {{ tool_version }} | {{ code_cycle }}
+    </p>
+
+    {% if debug_trace %}
+    <!-- Debug Trace — dev mode only -->
+    <div style="margin-top: 32px; background: #263238; color: #cfd8dc; border-radius: 8px; padding: 20px; font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace; font-size: 0.75rem; line-height: 1.6;">
+      <div style="font-size: 0.85rem; font-weight: 700; color: #ffab40; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Debug Trace (dev only)</div>
+
+      <!-- Coverage -->
+      <div style="margin-bottom: 14px;">
+        <div style="color: #80cbc4; font-weight: 600;">Coverage Label</div>
+        <div>label: <span style="color: #fff;">{{ debug_trace.coverage.label }}</span></div>
+        <div>reason: <span style="color: #fff;">{{ debug_trace.coverage.reason }}</span></div>
+        <div>counts: total={{ debug_trace.coverage.counts.total }} blocked_or_error={{ debug_trace.coverage.counts.blocked_or_error }} thin_or_worse={{ debug_trace.coverage.counts.thin_or_worse }}</div>
+        {% if debug_trace.coverage.authority_flags %}
+        <div style="color: #ce93d8;">authority_flags: {{ debug_trace.coverage.authority_flags | join(", ") }}</div>
+        {% endif %}
+        {% for mod, info in debug_trace.coverage.per_module.items() %}
+        <div style="padding-left: 12px; color: #b0bec5;">{{ mod }}: coverage={{ info.coverage }} status={{ info.status }} conf={{ info.confidence }} posture={{ info.posture }}</div>
+        {% endfor %}
+      </div>
+
+      <!-- Signals -->
+      <div style="margin-bottom: 14px;">
+        <div style="color: #80cbc4; font-weight: 600;">Key Signals ({{ debug_trace.signals.filled_count }}/{{ debug_trace.signals.total_slots }} slots filled)</div>
+        {% for slot, info in debug_trace.signals.slots.items() %}
+        <div style="padding-left: 12px;">
+          <span style="color: {{ '#a5d6a7' if info.filled else '#ef9a9a' }};">{{ slot }}:</span>
+          {% if info.filled %}<span style="color: #fff;">filled</span>{% else %}<span style="color: #ef9a9a;">empty</span>{% endif %}
+          <span style="color: #90a4ae;"> trigger={{ info.trigger }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Scenarios -->
+      <div style="margin-bottom: 14px;">
+        <div style="color: #80cbc4; font-weight: 600;">Scenarios ({{ debug_trace.scenarios.row_count }} rows)</div>
+        {% for name, info in debug_trace.scenarios.checks.items() %}
+        <div style="padding-left: 12px;">
+          <span style="color: {{ '#a5d6a7' if info.included else '#ef9a9a' }};">{{ name }}:</span>
+          {% if info.included %}<span style="color: #fff;">included</span>{% else %}<span style="color: #90a4ae;">excluded</span>{% endif %}
+          <span style="color: #90a4ae;"> trigger={{ info.trigger }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Best Next Inputs -->
+      <div style="margin-bottom: 14px;">
+        <div style="color: #80cbc4; font-weight: 600;">Best Next Inputs ({{ debug_trace.best_next_inputs.count }} selected)</div>
+        {% for r in debug_trace.best_next_inputs.ranking_reasons %}
+        <div style="padding-left: 12px;">
+          <span style="color: #fff;">{{ r.input }}:</span>
+          <span style="color: #90a4ae;">{{ r.reason }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- ED1 -->
+      {% if debug_trace.ed1 %}
+      <div style="margin-bottom: 14px;">
+        <div style="color: #80cbc4; font-weight: 600;">ED1 Screening</div>
+        <div style="padding-left: 12px;">
+          <span style="color: #fff;">status:</span> <span style="color: #90a4ae;">{{ debug_trace.ed1.status }}</span>
+          <span style="color: #fff; margin-left: 8px;">confidence:</span> <span style="color: #90a4ae;">{{ debug_trace.ed1.confidence }}</span>
+          <span style="color: #fff; margin-left: 8px;">tone:</span> <span style="color: #90a4ae;">{{ debug_trace.ed1.status_tone }}</span>
+        </div>
+        <div style="padding-left: 12px; color: #b0bec5;">
+          blockers={{ debug_trace.ed1.blocker_count }}
+          missing={{ debug_trace.ed1.missing_count }}
+          obligations={{ debug_trace.ed1.obligation_count }}
+          section_built={{ debug_trace.ed1.section_built }}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Caveats -->
+      <div>
+        <div style="color: #80cbc4; font-weight: 600;">Caveats ({{ debug_trace.caveats.output_count }}/{{ debug_trace.caveats.max_allowed }} max)</div>
+        {% for c in debug_trace.caveats.selection_log %}
+        <div style="padding-left: 12px;">
+          <span style="color: #fff;">{{ c.caveat }}:</span>
+          <span style="color: #90a4ae;">{{ c.trigger }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</body>
+</html>

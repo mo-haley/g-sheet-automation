@@ -1,0 +1,356 @@
+{
+  "pull_timestamp": "2026-03-23T16:01:53.225341+00:00",
+  "source": "zimas",
+  "key": "bpp_4305014026",
+  "data": {
+    "displayFieldName": "PIN",
+    "fieldAliases": {
+      "OBJECTID": "OBJECTID",
+      "ASSETID": "ASSETID",
+      "MAPSHEET": "MAPSHEET",
+      "ID": "ID",
+      "BPP": "BPP",
+      "MAP_REF": "MAP_REF",
+      "TRACT": "TRACT",
+      "BLOCK": "BLOCK",
+      "MOD": "MOD",
+      "LOT": "LOT",
+      "ARB": "ARB",
+      "PIND": "PIND",
+      "PIN": "PIN",
+      "BOOK": "BOOK",
+      "PAGE": "PAGE",
+      "PARCEL": "PARCEL",
+      "ENG_DIST": "ENG_DIST",
+      "CNCL_DIST": "CNCL_DIST",
+      "LST_MODF_DT": "LST_MODF_DT",
+      "CRTN_DT": "CRTN_DT",
+      "USER_ID": "USER_ID",
+      "Shape_Length": "Shape_Length",
+      "Shape_Area": "Shape_Area",
+      "MODLOT": "MODLOT"
+    },
+    "geometryType": "esriGeometryPolygon",
+    "spatialReference": {
+      "wkid": 102645,
+      "latestWkid": 2229
+    },
+    "fields": [
+      {
+        "name": "OBJECTID",
+        "type": "esriFieldTypeOID",
+        "alias": "OBJECTID"
+      },
+      {
+        "name": "ASSETID",
+        "type": "esriFieldTypeDouble",
+        "alias": "ASSETID"
+      },
+      {
+        "name": "MAPSHEET",
+        "type": "esriFieldTypeString",
+        "alias": "MAPSHEET",
+        "length": 9
+      },
+      {
+        "name": "ID",
+        "type": "esriFieldTypeSmallInteger",
+        "alias": "ID"
+      },
+      {
+        "name": "BPP",
+        "type": "esriFieldTypeString",
+        "alias": "BPP",
+        "length": 10
+      },
+      {
+        "name": "MAP_REF",
+        "type": "esriFieldTypeString",
+        "alias": "MAP_REF",
+        "length": 30
+      },
+      {
+        "name": "TRACT",
+        "type": "esriFieldTypeString",
+        "alias": "TRACT",
+        "length": 255
+      },
+      {
+        "name": "BLOCK",
+        "type": "esriFieldTypeString",
+        "alias": "BLOCK",
+        "length": 6
+      },
+      {
+        "name": "MOD",
+        "type": "esriFieldTypeString",
+        "alias": "MOD",
+        "length": 25
+      },
+      {
+        "name": "LOT",
+        "type": "esriFieldTypeString",
+        "alias": "LOT",
+        "length": 40
+      },
+      {
+        "name": "ARB",
+        "type": "esriFieldTypeString",
+        "alias": "ARB",
+        "length": 3
+      },
+      {
+        "name": "PIND",
+        "type": "esriFieldTypeString",
+        "alias": "PIND",
+        "length": 14
+      },
+      {
+        "name": "PIN",
+        "type": "esriFieldTypeString",
+        "alias": "PIN",
+        "length": 13
+      },
+      {
+        "name": "BOOK",
+        "type": "esriFieldTypeString",
+        "alias": "BOOK",
+        "length": 4
+      },
+      {
+        "name": "PAGE",
+        "type": "esriFieldTypeString",
+        "alias": "PAGE",
+        "length": 3
+      },
+      {
+        "name": "PARCEL",
+        "type": "esriFieldTypeString",
+        "alias": "PARCEL",
+        "length": 3
+      },
+      {
+        "name": "ENG_DIST",
+        "type": "esriFieldTypeString",
+        "alias": "ENG_DIST",
+        "length": 2
+      },
+      {
+        "name": "CNCL_DIST",
+        "type": "esriFieldTypeString",
+        "alias": "CNCL_DIST",
+        "length": 5
+      },
+      {
+        "name": "LST_MODF_DT",
+        "type": "esriFieldTypeDate",
+        "alias": "LST_MODF_DT",
+        "length": 8
+      },
+      {
+        "name": "CRTN_DT",
+        "type": "esriFieldTypeDate",
+        "alias": "CRTN_DT",
+        "length": 8
+      },
+      {
+        "name": "USER_ID",
+        "type": "esriFieldTypeString",
+        "alias": "USER_ID",
+        "length": 8
+      },
+      {
+        "name": "Shape_Length",
+        "type": "esriFieldTypeDouble",
+        "alias": "Shape_Length"
+      },
+      {
+        "name": "Shape_Area",
+        "type": "esriFieldTypeDouble",
+        "alias": "Shape_Area"
+      },
+      {
+        "name": "MODLOT",
+        "type": "esriFieldTypeString",
+        "alias": "MODLOT",
+        "length": 65
+      }
+    ],
+    "features": [
+      {
+        "attributes": {
+          "OBJECTID": 535308,
+          "ASSETID": 1462633,
+          "MAPSHEET": "132B169",
+          "ID": 1034,
+          "BPP": "4305014026",
+          "MAP_REF": "M B 76-14",
+          "TRACT": "TR 6800",
+          "BLOCK": " ",
+          "MOD": " ",
+          "LOT": "30",
+          "ARB": " ",
+          "PIND": "132B169-1034",
+          "PIN": "132B169  1034",
+          "BOOK": "4305",
+          "PAGE": "014",
+          "PARCEL": "026",
+          "ENG_DIST": "C",
+          "CNCL_DIST": "5",
+          "LST_MODF_DT": 1045668860000,
+          "CRTN_DT": 714268800000,
+          "USER_ID": null,
+          "Shape_Length": 332.00026414980454,
+          "Shape_Area": 5466.142081542866,
+          "MODLOT": "30"
+        },
+        "geometry": {
+          "rings": [
+            [
+              [
+                6445254.5077500045,
+                1842330.2205000073
+              ],
+              [
+                6445261.019749999,
+                1842381.518749997
+              ],
+              [
+                6445378.688749999,
+                1842353.992750004
+              ],
+              [
+                6445373.753250003,
+                1842315.064500004
+              ],
+              [
+                6445254.5077500045,
+                1842330.2205000073
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "attributes": {
+          "OBJECTID": 535735,
+          "ASSETID": 1463064,
+          "MAPSHEET": "132B169",
+          "ID": 1044,
+          "BPP": "4305014026",
+          "MAP_REF": "M B 76-14",
+          "TRACT": "TR 6800",
+          "BLOCK": " ",
+          "MOD": " ",
+          "LOT": "31",
+          "ARB": " ",
+          "PIND": "132B169-1044",
+          "PIN": "132B169  1044",
+          "BOOK": "4305",
+          "PAGE": "014",
+          "PARCEL": "026",
+          "ENG_DIST": "C",
+          "CNCL_DIST": "5",
+          "LST_MODF_DT": 1045668860000,
+          "CRTN_DT": 714268800000,
+          "USER_ID": null,
+          "Shape_Length": 320.4155160272077,
+          "Shape_Area": 4808.3050523089505,
+          "MODLOT": "31"
+        },
+        "geometry": {
+          "rings": [
+            [
+              [
+                6445254.5077500045,
+                1842330.2205000073
+              ],
+              [
+                6445373.753250003,
+                1842315.064500004
+              ],
+              [
+                6445368.722000003,
+                1842275.382249996
+              ],
+              [
+                6445249.470500007,
+                1842290.5390000045
+              ],
+              [
+                6445254.5077500045,
+                1842330.2205000073
+              ]
+            ]
+          ]
+        }
+      },
+      {
+        "attributes": {
+          "OBJECTID": 536100,
+          "ASSETID": 1463439,
+          "MAPSHEET": "132B169",
+          "ID": 1065,
+          "BPP": "4305014026",
+          "MAP_REF": "M B 76-14",
+          "TRACT": "TR 6800",
+          "BLOCK": " ",
+          "MOD": "FR",
+          "LOT": "32",
+          "ARB": " ",
+          "PIND": "132B169-1065",
+          "PIN": "132B169  1065",
+          "BOOK": "4305",
+          "PAGE": "014",
+          "PARCEL": "026",
+          "ENG_DIST": "C",
+          "CNCL_DIST": "5",
+          "LST_MODF_DT": 1045668860000,
+          "CRTN_DT": 714268800000,
+          "USER_ID": null,
+          "Shape_Length": 314.5716557947781,
+          "Shape_Area": 4758.723217461333,
+          "MODLOT": "FR 32"
+        },
+        "geometry": {
+          "rings": [
+            [
+              [
+                6445368.722000003,
+                1842275.382249996
+              ],
+              [
+                6445365.578749999,
+                1842250.5890000015
+              ],
+              [
+                6445364.949750006,
+                1842245.6287499964
+              ],
+              [
+                6445353.771500006,
+                1842236.9672500044
+              ],
+              [
+                6445348.811250001,
+                1842237.5970000029
+              ],
+              [
+                6445244.431999996,
+                1842250.8464999944
+              ],
+              [
+                6445249.470500007,
+                1842290.5390000045
+              ],
+              [
+                6445368.722000003,
+                1842275.382249996
+              ]
+            ]
+          ]
+        }
+      }
+    ]
+  }
+}

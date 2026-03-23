@@ -208,23 +208,26 @@ class TestExtractZiHeader:
     def test_zi2478_header_extraction(self):
         """ZI2478.pdf fixture: ordinance 185539, title about San Pedro CPIO."""
         pytest.importorskip("pdfplumber")
-        title, ordinance, date, quality = extract_zi_header(_ZI2478_PDF)
+        title, ordinance, date, header_zi, quality = extract_zi_header(_ZI2478_PDF)
         assert quality == "good"
         assert ordinance == "185539"
         assert title is not None
         assert len(title) > 5
+        # header_zi_number should match the ZI code
+        assert header_zi == "2478"
 
     def test_zi2130_header_extraction(self):
         """ZI2130.pdf fixture: no ordinance in header (Enterprise Zone)."""
         pytest.importorskip("pdfplumber")
-        title, ordinance, date, quality = extract_zi_header(_ZI2130_PDF)
+        title, ordinance, date, header_zi, quality = extract_zi_header(_ZI2130_PDF)
         assert quality == "good"
         assert title is not None
 
     def test_missing_file_returns_failed(self, tmp_path):
-        title, ordinance, date, quality = extract_zi_header(tmp_path / "missing.pdf")
+        title, ordinance, date, header_zi, quality = extract_zi_header(tmp_path / "missing.pdf")
         assert quality == "failed"
         assert title is None
+        assert header_zi is None
 
 
 class TestRunZiFetchEndToEnd:
@@ -249,6 +252,7 @@ class TestRunZiFetchEndToEnd:
         assert result.url_verified is True
         assert result.extracted_title is not None
         assert result.extracted_ordinance_number == "185539"
+        assert result.header_zi_number == "2478"
         assert result.extraction_quality == "good"
         assert result.cached_path is not None
         assert result.cached_path.exists()
@@ -354,3 +358,180 @@ class TestNoAccidentalActivation:
         ]
         for label in non_zi:
             assert build_zi_url(label) is None, f"Expected None for {label!r}"
+
+
+# ── Enrichment and conflict detection ────────────────────────────────────────
+
+class TestZiEnrichmentAndConflicts:
+    """Verify that fetched ZI header metadata is merged back into records
+    with provenance, and that conflicts are surfaced without overclaiming.
+    """
+
+    def _make_zi_record(self, doc_label: str = "ZI-2478", source_ordinance: str | None = None):
+        from zimas_linked_docs.models import LinkedDocRecord, DOC_TYPE_ZI_DOCUMENT, FETCH_NOW
+        return LinkedDocRecord(
+            record_id=f"test-{doc_label}",
+            doc_type=DOC_TYPE_ZI_DOCUMENT,
+            doc_label=doc_label,
+            usability_posture="manual_review_first",
+            fetch_decision=FETCH_NOW,
+            source_ordinance_number=source_ordinance,
+        )
+
+    def _good_result(
+        self,
+        doc_label: str = "ZI-2478",
+        title: str | None = "CPIO Regulations for Coastal San Pedro",
+        ordinance: str | None = "185539",
+        effective_date: str | None = "April 15, 2020",
+        header_zi: str | None = "2478",
+    ):
+        from zimas_linked_docs.zi_fetch import ZIFetchResult
+        return ZIFetchResult(
+            doc_label=doc_label,
+            url=f"{_ZI_PDF_BASE}/ZI2478.pdf",
+            fetch_status="success",
+            fetch_notes="Fetched 5000 bytes",
+            extracted_title=title,
+            extracted_ordinance_number=ordinance,
+            extracted_effective_date=effective_date,
+            header_zi_number=header_zi,
+            extraction_quality="good",
+            extraction_notes="Extraction quality: good",
+        )
+
+    def test_title_enrichment_provenance(self):
+        """Successful fetch: title set, extraction_notes has provenance label."""
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        record = self._make_zi_record()
+        mock_result = self._good_result()
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch", return_value=mock_result):
+            _, issues = extract_surface_fields([record], _fetch_enabled=True)
+
+        assert record.extracted_title == "CPIO Regulations for Coastal San Pedro"
+        assert "Source: ZI PDF header" in record.extraction_notes
+        assert "Title:" in record.extraction_notes
+        # No conflict issues
+        conflict_issues = [i for i in issues if "CONFLICT" in i.message.upper() or "mismatch" in i.message.lower()]
+        assert len(conflict_issues) == 0
+
+    def test_ordinance_enrichment_when_present(self):
+        """Header ordinance present: stored in record and noted in provenance."""
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        record = self._make_zi_record()
+        mock_result = self._good_result(ordinance="185539")
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch", return_value=mock_result):
+            _, issues = extract_surface_fields([record], _fetch_enabled=True)
+
+        assert record.extracted_ordinance_number == "185539"
+        assert "Ordinance: 185539" in record.extraction_notes
+
+    def test_no_ordinance_header_case_noted_explicitly(self):
+        """Header has no ordinance: absence noted in extraction_notes, not silently missing."""
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        record = self._make_zi_record()
+        mock_result = self._good_result(ordinance=None)
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch", return_value=mock_result):
+            _, issues = extract_surface_fields([record], _fetch_enabled=True)
+
+        assert record.extracted_ordinance_number is None
+        assert "Ordinance: not in header" in record.extraction_notes
+
+    def test_zi_number_conflict_clears_title(self):
+        """PDF header has different ZI number: title cleared, error issue raised."""
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        record = self._make_zi_record(doc_label="ZI-2478")
+        # header_zi_number says 9999 — mismatch
+        mock_result = self._good_result(header_zi="9999")
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch", return_value=mock_result):
+            _, issues = extract_surface_fields([record], _fetch_enabled=True)
+
+        # Title must be cleared — fetched content is from the wrong document
+        assert record.extracted_title is None
+        # Error issue surfaced
+        error_issues = [i for i in issues if i.severity == "error" and "mismatch" in i.message.lower()]
+        assert len(error_issues) == 1
+        assert "ZI-2478" in error_issues[0].message
+        assert "9999" in error_issues[0].message
+        # Conflict flagged in notes
+        assert "CONFLICT" in record.extraction_notes
+
+    def test_ordinance_conflict_flagged_title_preserved(self):
+        """Detected ordinance differs from header ordinance: warning raised, title not cleared."""
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        # source_ordinance_number from detection = "185539"
+        # PDF header ordinance = "186000" — different
+        record = self._make_zi_record(source_ordinance="185539")
+        mock_result = self._good_result(ordinance="186000")
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch", return_value=mock_result):
+            _, issues = extract_surface_fields([record], _fetch_enabled=True)
+
+        # Title preserved — ordinance mismatch is informational, not identity failure
+        assert record.extracted_title is not None
+        # Both ordinance values in notes
+        assert "185539" in record.extraction_notes
+        assert "186000" in record.extraction_notes
+        assert "CONFLICT" in record.extraction_notes
+        # Warning issue, not error
+        conflict_issues = [i for i in issues if "mismatch" in i.message.lower()]
+        assert len(conflict_issues) == 1
+        assert conflict_issues[0].severity == "warning"
+
+    def test_cache_hit_path_enriches_same_as_fresh_fetch(self, tmp_path):
+        """Cache hit should produce identical enrichment as a fresh fetch."""
+        pytest.importorskip("pdfplumber")
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        # Pre-populate cache with real ZI2478 bytes
+        doc_dir = tmp_path / "zi_document"
+        doc_dir.mkdir(parents=True)
+        pdf_path = doc_dir / "ZI2478.pdf"
+        pdf_path.write_bytes(_ZI2478_PDF.read_bytes())
+        meta_path = pdf_path.with_suffix(".meta.json")
+        meta_path.write_text(json.dumps({"url": "...", "content_type": "application/pdf"}))
+
+        record = self._make_zi_record()
+
+        with patch("requests.head"):
+            with patch("zimas_linked_docs.zi_fetch._rate_limit"):
+                _, issues = extract_surface_fields(
+                    [record], _fetch_enabled=True,
+                    _cache_dir=tmp_path,
+                )
+
+        assert record.fetch_status == "success"
+        assert record.extracted_title is not None
+        assert record.extracted_ordinance_number == "185539"
+        assert "Source: ZI PDF header" in record.extraction_notes
+
+    def test_no_enrichment_for_non_zi_fetch_now_doc(self):
+        """CPIO fetch_now goes to _extract_cpio stub; run_zi_fetch not called."""
+        from zimas_linked_docs.models import (
+            DOC_TYPE_OVERLAY_CPIO, FETCH_NOW, LinkedDocRecord,
+        )
+        from zimas_linked_docs.structure_extractor import extract_surface_fields
+
+        record = LinkedDocRecord(
+            record_id="test-cpio-enrich",
+            doc_type=DOC_TYPE_OVERLAY_CPIO,
+            doc_label="Venice CPIO",
+            usability_posture="manual_review_first",
+            fetch_decision=FETCH_NOW,
+        )
+
+        with patch("zimas_linked_docs.structure_extractor.run_zi_fetch") as mock_zi:
+            extract_surface_fields([record], _fetch_enabled=True)
+
+        mock_zi.assert_not_called()
+        assert record.extracted_title is None
+        assert record.extracted_ordinance_number is None

@@ -24,6 +24,7 @@ from calc.loading import calculate_loading
 from calc.open_space import calculate_open_space
 from calc.parking import calculate_parking
 from ingest.geocoder import Geocoder
+from ingest.multi_parcel import resolve_multi_parcel_site
 from ingest.parser import parse_zimas_response
 from ingest.zimas import ZIMASClient
 from models.project import AffordabilityPlan, OccupancyArea, Project, UnitType
@@ -591,25 +592,38 @@ def run_address_only():
     if not address:
         return render_template("index.html", error="Address is required.")
 
-    # Geocode
-    try:
-        geocoder = Geocoder()
-        coords = geocoder.geocode(address)
-    except Exception as e:
-        return render_template("index.html", error=f"Geocoding failed: {e}")
+    # Parse optional APN list
+    apn_raw = request.form.get("apn_list", "").strip()
+    apn_list = [a.strip() for a in apn_raw.split(",") if a.strip()] if apn_raw else []
 
-    if coords is None:
-        return render_template("index.html", error=f"Could not geocode address: '{address}'. Try a more specific LA City address.")
+    zimas = ZIMASClient()
+    ingest_issues = []
 
-    # ZIMAS
-    try:
-        zimas = ZIMASClient()
-        identify_data = zimas.identify(coords[0], coords[1])
-        site, zoning_parse, ingest_issues = parse_zimas_response(
-            address, identify_data, coordinates=coords, pull_timestamp=zimas.pull_timestamp
-        )
-    except Exception as e:
-        return render_template("index.html", error=f"ZIMAS query failed: {e}")
+    if apn_list:
+        # Multi-parcel path: resolve site from user-supplied APNs
+        try:
+            site, multi_issues = resolve_multi_parcel_site(apn_list, address, zimas)
+            ingest_issues = multi_issues
+        except Exception as e:
+            return render_template("index.html", error=f"Multi-parcel ZIMAS query failed: {e}")
+    else:
+        # Standard address-only path
+        try:
+            geocoder = Geocoder()
+            coords = geocoder.geocode(address)
+        except Exception as e:
+            return render_template("index.html", error=f"Geocoding failed: {e}")
+
+        if coords is None:
+            return render_template("index.html", error=f"Could not geocode address: '{address}'. Try a more specific LA City address.")
+
+        try:
+            identify_data = zimas.identify(coords[0], coords[1])
+            site, zoning_parse, ingest_issues = parse_zimas_response(
+                address, identify_data, coordinates=coords, pull_timestamp=zimas.pull_timestamp
+            )
+        except Exception as e:
+            return render_template("index.html", error=f"ZIMAS query failed: {e}")
 
     # Build a minimal empty project for the pipeline
     project = Project(

@@ -74,6 +74,10 @@ class ZIFetchResult:
     extracted_title: str | None = None
     extracted_ordinance_number: str | None = None
     extracted_effective_date: str | None = None
+    # ZI number as it appears in the PDF header (digits only, e.g. "2478").
+    # Used to cross-check against the expected ZI number from doc_label.
+    # None if the header ZI line was not found in the PDF.
+    header_zi_number: str | None = None
     extraction_quality: str = "not_attempted"  # good / weak / failed / not_attempted
     extraction_notes: str = ""
 
@@ -206,22 +210,26 @@ def fetch_zi_pdf(
 
 def extract_zi_header(
     pdf_path: Path,
-) -> tuple[str | None, str | None, str | None, str]:
+) -> tuple[str | None, str | None, str | None, str | None, str]:
     """Extract header fields from a ZI PDF using pdfplumber.
 
-    Returns (title, ordinance_number, effective_date, quality).
+    Returns (title, ordinance_number, effective_date, header_zi_number, quality).
     quality: "good" / "weak" / "failed"
+
+    header_zi_number is the ZI number as printed in the PDF header (digits only,
+    e.g. "2478"). Used by callers to cross-check against the expected ZI from
+    doc_label. None if the header ZI line was not found.
 
     Only reads the first page. Stops before rule content (COMMENTS,
     INSTRUCTIONS, BACKGROUND sections). Does not harvest body references.
     """
     if not pdf_path.exists():
-        return None, None, None, "failed"
+        return None, None, None, None, "failed"
 
     try:
         import pdfplumber
     except ImportError:
-        return None, None, None, "failed"
+        return None, None, None, None, "failed"
 
     first_page_text = ""
     try:
@@ -237,11 +245,11 @@ def extract_zi_header(
                     except Exception:
                         pass
     except Exception:
-        return None, None, None, "failed"
+        return None, None, None, None, "failed"
 
     char_count = len(first_page_text.strip())
     if char_count == 0:
-        return None, None, None, "failed"
+        return None, None, None, None, "failed"
     quality = "good" if char_count >= _MIN_GOOD_TEXT_LENGTH else "weak"
 
     header_region = first_page_text[:500]
@@ -255,6 +263,11 @@ def extract_zi_header(
     m = _HEADER_DATE.search(header_region)
     if m:
         effective_date = m.group(1).strip()
+
+    header_zi_number: str | None = None
+    m = _HEADER_ZI.search(header_region)
+    if m:
+        header_zi_number = m.group(1).strip()
 
     # Title: lines after ZI/ordinance header lines, before section keywords
     title: str | None = None
@@ -274,7 +287,7 @@ def extract_zi_header(
     if title_lines:
         title = " ".join(title_lines[:3]).strip()
 
-    return title, ordinance_number, effective_date, quality
+    return title, ordinance_number, effective_date, header_zi_number, quality
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -334,10 +347,11 @@ def run_zi_fetch(
     result.fetch_notes = notes
 
     # Extract header fields from cached PDF
-    title, ordinance_number, effective_date, quality = extract_zi_header(cache_path)
+    title, ordinance_number, effective_date, header_zi_number, quality = extract_zi_header(cache_path)
     result.extracted_title = title
     result.extracted_ordinance_number = ordinance_number
     result.extracted_effective_date = effective_date
+    result.header_zi_number = header_zi_number
     result.extraction_quality = quality
 
     notes_parts = [f"Extraction quality: {quality}"]

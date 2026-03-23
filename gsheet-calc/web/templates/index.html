@@ -99,6 +99,13 @@
             <span class="hint">Street number + street name + city + state + ZIP. Example: 1425 S Robertson Blvd, Los Angeles, CA 90035. Zone, height district, TOC tier, and lot area auto-pulled from ZIMAS.</span>
           </div>
         </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="apn_list">APNs (optional — for multi-parcel sites)</label>
+            <input type="text" id="apn_list" name="apn_list" placeholder="e.g. 4305014026, 4305014027" value="{{ request.form.get('apn_list', '') }}">
+            <span class="hint">Comma-separated 10-digit LA County assessor parcel numbers (Book-Page-Parcel). If provided, site area and parcel count are derived from these APNs instead of the geocoded address. Leave blank for single-address lookup.</span>
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="project_name">Project Name</label>

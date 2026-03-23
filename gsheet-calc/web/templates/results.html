@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ project.project_name }} — Feasibility Results</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; font-size: 14px; line-height: 1.5; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+    /* Header bar */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .header h1 { font-size: 1.4rem; color: #1a1a1a; }
+    .header .meta { font-size: 0.75rem; color: #888; text-align: right; }
+    .header .meta span { display: block; }
+
+    /* Action bar */
+    .actions { display: flex; gap: 12px; margin-bottom: 24px; }
+    .btn { display: inline-block; padding: 10px 24px; border-radius: 5px; font-size: 0.85rem; font-weight: 600; text-decoration: none; border: none; cursor: pointer; }
+    .btn-primary { background: #2F5496; color: #fff; }
+    .btn-primary:hover { background: #1d3a6a; }
+    .btn-outline { background: #fff; color: #2F5496; border: 1px solid #2F5496; }
+    .btn-outline:hover { background: #f0f4fa; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card h2 { font-size: 1.05rem; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #2F5496; color: #2F5496; }
+    .card h3 { font-size: 0.9rem; color: #555; margin: 16px 0 8px; }
+
+    /* Section numbering */
+    .section-num { display: inline-block; background: #2F5496; color: #fff; width: 22px; height: 22px; border-radius: 50%; text-align: center; font-size: 0.7rem; line-height: 22px; margin-right: 8px; font-weight: 700; }
+
+    /* Snapshot grid */
+    .snapshot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 32px; }
+    .snapshot-grid dt { font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+    .snapshot-grid dd { font-size: 0.9rem; color: #222; margin-bottom: 8px; }
+
+    /* Key results table */
+    .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .result-card { background: #f8f9fc; border-radius: 6px; padding: 16px; text-align: center; border: 1px solid #e8ecf2; }
+    .result-card .value { font-size: 1.6rem; font-weight: 700; color: #1a1a1a; }
+    .result-card .label { font-size: 0.75rem; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .result-card .conf { font-size: 0.65rem; margin-top: 4px; }
+    .conf-high { color: #2e7d32; }
+    .conf-medium { color: #f57f17; }
+    .conf-low { color: #c62828; }
+
+    /* Flags */
+    .flag-list { list-style: none; padding: 0; }
+    .flag-list li { padding: 6px 10px; margin-bottom: 4px; border-radius: 4px; font-size: 0.85rem; }
+    .flag-blocking { background: #fce4ec; border-left: 3px solid #c62828; color: #b71c1c; }
+    .flag-info { background: #fff3e0; border-left: 3px solid #ef6c00; color: #e65100; }
+
+    /* Governing logic */
+    .logic-item { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
+    .logic-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .logic-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .logic-topic { font-weight: 700; color: #222; font-size: 0.95rem; }
+    .logic-path { font-size: 0.75rem; color: #2F5496; font-weight: 600; }
+    .logic-explanation { font-size: 0.85rem; color: #444; margin-bottom: 6px; }
+    .logic-steps { list-style: none; padding-left: 0; }
+    .logic-steps li { font-size: 0.8rem; color: #555; padding: 2px 0 2px 16px; position: relative; }
+    .logic-steps li::before { content: "->"; position: absolute; left: 0; color: #999; font-size: 0.75rem; }
+    .logic-meta { font-size: 0.7rem; color: #999; margin-top: 4px; }
+    .logic-source { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; }
+    .source-derived { background: #e8f5e9; color: #2e7d32; }
+    .source-unresolved { background: #fce4ec; color: #c62828; }
+    .source-user { background: #e3f2fd; color: #1565c0; }
+    .source-autofetched { background: #f3e5f5; color: #7b1fa2; }
+    .logic-assumptions { font-size: 0.75rem; color: #888; font-style: italic; margin-top: 4px; }
+
+    /* Calc ledger */
+    .ledger-section { margin-bottom: 20px; }
+    .ledger-section h3 { font-size: 0.85rem; color: #2F5496; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .ledger-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .ledger-table th { text-align: left; font-weight: 600; color: #666; padding: 6px 8px; border-bottom: 1px solid #ddd; font-size: 0.7rem; text-transform: uppercase; }
+    .ledger-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .ledger-table .val { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ledger-table .formula { font-family: "SF Mono", Monaco, "Cascadia Code", monospace; font-size: 0.75rem; color: #666; }
+    .ledger-table .steps { font-size: 0.72rem; color: #888; }
+    .ledger-table .code-ref { font-size: 0.7rem; color: #2F5496; }
+
+    /* Warnings / issues */
+    .warning-item { padding: 10px 12px; margin-bottom: 6px; border-radius: 5px; font-size: 0.82rem; }
+    .warning-critical { background: #fce4ec; border-left: 3px solid #c62828; }
+    .warning-high { background: #fff3e0; border-left: 3px solid #ef6c00; }
+    .warning-medium { background: #fff8e1; border-left: 3px solid #f9a825; }
+    .warning-low { background: #f1f8e9; border-left: 3px solid #689f38; }
+    .warning-severity { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .warning-title { font-weight: 600; color: #333; }
+    .warning-desc { font-size: 0.78rem; color: #666; margin-top: 2px; }
+
+    /* Scenarios summary */
+    .scenario-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+    .scenario-row:last-child { border-bottom: none; }
+    .scenario-name { font-weight: 600; font-size: 0.85rem; }
+    .scenario-status { font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+    .status-likely_eligible { background: #e8f5e9; color: #2e7d32; }
+    .status-likely_ineligible { background: #f5f5f5; color: #888; }
+    .status-unresolved { background: #fff3e0; color: #e65100; }
+    .scenario-summary { font-size: 0.78rem; color: #666; }
+
+    /* Footer */
+    .disclaimer { font-size: 0.7rem; color: #999; text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #eee; font-style: italic; }
+
+    /* Print */
+    @media print {
+      body { background: #fff; font-size: 11px; }
+      .container { max-width: 100%; padding: 0; }
+      .actions { display: none; }
+      .card { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+    }
+
+    @media (max-width: 700px) {
+      .results-grid { grid-template-columns: 1fr 1fr; }
+      .snapshot-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>{{ project.project_name }}</h1>
+        <div style="font-size: 0.85rem; color: #555; margin-top: 2px;">{{ address }}</div>
+      </div>
+      <div class="meta">
+        <span>{{ tool_version }}</span>
+        <span>{{ code_cycle }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <a href="/" class="btn btn-outline">New Analysis</a>
+      <a href="/export/{{ run_id }}" class="btn btn-primary">Export Excel Workbook</a>
+      <button onclick="window.print()" class="btn btn-outline">Print / PDF</button>
+    </div>
+
+    <!-- 1. Project Snapshot -->
+    <div class="card">
+      <h2><span class="section-num">1</span>Project Snapshot</h2>
+      <dl class="snapshot-grid">
+        <dt>Address</dt>
+        <dd>{{ site.address }}</dd>
+
+        <dt>Zone / Height District</dt>
+        <dd>{{ site.zone or 'Unknown' }}{% if site.height_district %} / HD {{ site.height_district }}{% endif %}</dd>
+
+        <dt>Lot Area (ZIMAS)</dt>
+        <dd>{{ "{:,.0f}".format(site.lot_area_sf) if site.lot_area_sf else 'Unknown' }} sf</dd>
+
+        <dt>Overlays</dt>
+        <dd>{% if overlays %}{{ overlays | join(', ') }}{% else %}None identified{% endif %}</dd>
+
+        <dt>Application Date</dt>
+        <dd>{{ project.application_date or 'Not specified' }}</dd>
+
+        <dt>Policy Path Tested</dt>
+        <dd>{{ policy_path_label }}</dd>
+
+        <dt>TOC Tier</dt>
+        <dd>{% if site.toc_tier %}Tier {{ site.toc_tier }}{% else %}Not in TOC area{% endif %}</dd>
+
+        <dt>Community Plan</dt>
+        <dd>{{ site.community_plan_area or 'Unknown' }}</dd>
+
+        <dt>Unit Mix</dt>
+        <dd>{% for u in project.unit_mix %}{{ u.count }} {{ u.label }}{% if not loop.last %}, {% endif %}{% endfor %}{% if not project.unit_mix %}None entered{% endif %} ({{ project.total_units }} total)</dd>
+
+        <dt>Commercial</dt>
+        <dd>{% if project.occupancy_areas %}{% for o in project.occupancy_areas %}{{ o.use_description }} — {{ "{:,.0f}".format(o.area_sf) }} sf{% endfor %}{% else %}None{% endif %}</dd>
+      </dl>
+    </div>
+
+    <!-- 2. Key Feasibility Results -->
+    <div class="card">
+      <h2><span class="section-num">2</span>Key Feasibility Results</h2>
+      <div class="results-grid">
+        <div class="result-card">
+          <div class="value">{{ key_results.allowable_units }}</div>
+          <div class="label">Allowable Units</div>
+          <div class="conf conf-{{ key_results.allowable_units_confidence }}">{{ key_results.allowable_units_confidence }}</div>
+        </div>
+        <div class="result-card">
+          <div class="value">{{ key_results.required_parking }}</div>
+          <div class="label">Required Parking</div>
+          <div class="conf conf-{{ key_results.parking_confidence }}">{{ key_results.parking_confidence }}</div>
+        </div>
+        <div class="result-card">
+          <div class="value">{{ key_results.open_space_required }}</div>
+          <div class="label">Open Space (sf)</div>
+          <div class="conf conf-{{ key_results.open_space_confidence }}">{{ key_results.open_space_confidence }}</div>
+        </div>
+        <div class="result-card">
+          <div class="value">{{ key_results.height_limit }}</div>
+          <div class="label">Height Limit (ft)</div>
+          <div class="conf conf-{{ key_results.height_confidence }}">{{ key_results.height_confidence }}</div>
+        </div>
+        <div class="result-card">
+          <div class="value">{{ key_results.loading_required }}</div>
+          <div class="label">Loading Required</div>
+          <div class="conf conf-{{ key_results.loading_confidence }}">{{ key_results.loading_confidence }}</div>
+        </div>
+        <div class="result-card">
+          <div class="value">{{ key_results.far_status }}</div>
+          <div class="label">FAR Status</div>
+          <div class="conf conf-medium">see detail</div>
+        </div>
+      </div>
+
+      {% if flags %}
+      <h3>Flags &amp; Triggers</h3>
+      <ul class="flag-list">
+        {% for flag in flags %}
+        <li class="{{ 'flag-blocking' if flag.startswith('BLOCKING') else 'flag-info' }}">{{ flag }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    <!-- 3. Governing Logic -->
+    <div class="card">
+      <h2><span class="section-num">3</span>Governing Logic</h2>
+      {% for item in governing_logic %}
+      <div class="logic-item">
+        <div class="logic-header">
+          <span class="logic-topic">{{ item.topic }}</span>
+          <span class="logic-path">{{ item.governing_path }}</span>
+        </div>
+        <div class="logic-explanation">{{ item.explanation }}</div>
+        {% if item.steps %}
+        <ul class="logic-steps">
+          {% for step in item.steps %}
+          <li>{{ step }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <div class="logic-meta">
+          <span class="logic-source source-{{ item.source }}">{{ item.source }}</span>
+          &nbsp; {{ item.code_section }}
+          &nbsp; Confidence: <span class="conf-{{ item.confidence }}">{{ item.confidence }}</span>
+        </div>
+        {% if item.assumptions %}
+        <div class="logic-assumptions">Assumptions: {{ item.assumptions | join('; ') }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 4. Calculation Detail -->
+    <div class="card">
+      <h2><span class="section-num">4</span>Calculation Detail</h2>
+      {% for section in calc_ledger %}
+      <div class="ledger-section">
+        <h3>{{ section.title }}</h3>
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th style="width:25%">Item</th>
+              <th style="width:12%">Value</th>
+              <th style="width:5%">Unit</th>
+              <th style="width:30%">Formula / Basis</th>
+              <th style="width:18%">Steps</th>
+              <th style="width:10%">Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in section.items %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td class="val">{{ item.value }}</td>
+              <td>{{ item.unit }}</td>
+              <td class="formula">{{ item.formula }}</td>
+              <td class="steps">{% for s in item.steps %}{{ s }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+              <td class="code-ref">{{ item.code }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 5. Advisory Pathway Screening -->
+    <div class="card">
+      <h2><span class="section-num">5</span>Advisory Pathway Screening</h2>
+      {% for sc in scenarios %}
+      <div class="scenario-row">
+        <div>
+          <div class="scenario-name">{{ sc.name }}</div>
+          <div class="scenario-summary">{{ sc.summary }}</div>
+          {% if sc.missing_inputs %}
+          <div style="font-size: 0.72rem; color: #999; margin-top: 2px;">Missing: {{ sc.missing_inputs | join(', ') }}</div>
+          {% endif %}
+        </div>
+        <span class="scenario-status status-{{ sc.status }}">{{ sc.status | replace('_', ' ') | title }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- 6. Assumptions / Warnings -->
+    <div class="card">
+      <h2><span class="section-num">6</span>Assumptions &amp; Warnings</h2>
+      <div style="font-size: 0.8rem; color: #666; margin-bottom: 12px;">
+        {{ total_issues }} issue{{ 's' if total_issues != 1 }} identified
+        {% if blocking_count %} &mdash; <strong style="color: #c62828;">{{ blocking_count }} blocking</strong>{% endif %}
+      </div>
+      {% for w in warnings %}
+      <div class="warning-item warning-{{ w.severity }}">
+        <div class="warning-severity">{{ w.severity }}{% if w.blocking %} / BLOCKING{% endif %} &mdash; {{ w.category }}</div>
+        <div class="warning-title">{{ w.title }}</div>
+        <div class="warning-desc">{{ w.description }}</div>
+      </div>
+      {% endfor %}
+      {% if not warnings %}
+      <div style="font-size: 0.85rem; color: #666; font-style: italic;">No issues identified.</div>
+      {% endif %}
+    </div>
+
+    <p class="disclaimer">
+      Preliminary internal analysis only. Not for final code determination without professional review.<br>
+      {{ tool_version }} | {{ code_cycle }} | ZIMAS pull: {{ site.pull_timestamp or 'N/A' }}
+    </p>
+
+  </div>
+</body>
+</html>

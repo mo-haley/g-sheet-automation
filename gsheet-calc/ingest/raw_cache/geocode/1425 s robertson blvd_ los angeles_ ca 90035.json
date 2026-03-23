@@ -1,0 +1,23 @@
+[
+  {
+    "place_id": 385458834,
+    "licence": "Data \u00a9 OpenStreetMap contributors, ODbL 1.0. http://osm.org/copyright",
+    "osm_type": "way",
+    "osm_id": 397994421,
+    "lat": "34.0540770",
+    "lon": "-118.3839049",
+    "class": "place",
+    "type": "house",
+    "place_rank": 30,
+    "importance": 9.99999999995449e-06,
+    "addresstype": "place",
+    "name": "",
+    "display_name": "1425, South Robertson Boulevard, Pico-Robertson, Los Angeles, Los Angeles County, California, 90035, United States",
+    "boundingbox": [
+      "34.0540270",
+      "34.0541270",
+      "-118.3839549",
+      "-118.3838549"
+    ]
+  }
+]

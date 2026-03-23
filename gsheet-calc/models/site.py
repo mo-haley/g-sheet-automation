@@ -53,9 +53,20 @@ class Site(BaseModel):
     parcel_count: int = 1
     lot_tie_assumed: bool = False
 
+    # Site basis
+    site_basis: str = "single_parcel_assumed"  # single_parcel_assumed / multi_parcel_user / unknown
+    site_basis_note: str | None = None
+
     # Confidence
     chapter_applicability_confidence: str = "unknown"
     parcel_match_confidence: str = "unknown"
+
+    # Diagnostics — visible in debug/JSON output for tracing ingest decisions
+    diag_all_zone_strings: list[str] = Field(default_factory=list)
+    diag_zoning_ambiguous: bool = False
+    diag_zoning_layer_count: int = 0
+    diag_parcel_layer_count: int = 0
+    diag_identify_layers_returned: list[int] = Field(default_factory=list)
 
     # Provenance
     data_sources: list[DataSource] = Field(default_factory=list)

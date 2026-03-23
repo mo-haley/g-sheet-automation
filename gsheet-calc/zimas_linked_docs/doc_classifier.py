@@ -28,8 +28,15 @@ from zimas_linked_docs.models import (
     DOC_TYPE_SPECIFIC_PLAN,
     DOC_TYPE_OVERLAY_CPIO,
     DOC_TYPE_OVERLAY_SUPPLEMENTAL,
+    DOC_TYPE_OVERLAY_CDO,
+    DOC_TYPE_OVERLAY_HA,
+    DOC_TYPE_OVERLAY_PO,
     DOC_TYPE_Q_CONDITION,
     DOC_TYPE_D_LIMITATION,
+    DOC_TYPE_CASE_ZA,
+    DOC_TYPE_CASE_CPC,
+    DOC_TYPE_CASE_DIR,
+    DOC_TYPE_CASE_ENV,
     DOC_TYPE_ZI_DOCUMENT,
     DOC_TYPE_MAP_FIGURE_PACKET,
     DOC_TYPE_CASE_DOCUMENT,
@@ -72,6 +79,98 @@ def _is_supplemental(name: str) -> bool:
         or "SUPPLEMENTAL USE" in n
         or "SUPPLEMENTAL DISTRICT" in n
     )
+
+
+# ── Supplemental-district subtype helpers ─────────────────────────────────────
+# Subtype recognition uses exact code match OR distinctive full-name substring
+# to avoid false positives on short codes.
+#
+# Subtype recognition improves interrupt routing; it does NOT mean the district
+# standards have been interpreted. Carry subtype as doc_type only.
+
+def _is_cdo(name: str) -> bool:
+    """Coastal Development Overlay."""
+    n = name.upper().strip()
+    return n == "CDO" or "COASTAL DEVELOPMENT" in n
+
+
+def _is_ha(name: str) -> bool:
+    """Hillside Area overlay."""
+    n = name.upper().strip()
+    return n == "HA" or "HILLSIDE AREA" in n
+
+
+def _is_po(name: str) -> bool:
+    """Pedestrian Oriented District."""
+    n = name.upper().strip()
+    return n in ("PO", "POD") or "PEDESTRIAN ORIENTED" in n
+
+
+_RE_CASE_PREFIX = re.compile(r"^([A-Za-z]+)-")
+
+
+def _case_subtype(case_number: str) -> str:
+    """Return the doc_type for a planning case number based on its prefix.
+
+    Prefix routing is a scope hint — it does NOT mean the case entitlement
+    terms or conditions are known. Unknown prefixes fall back to the generic
+    case_document type so interrupt behavior remains conservative.
+
+    Mapping:
+        ZA, AA  → case_za   (Zoning Administrator / Administrative Appeal)
+        CPC, CF → case_cpc  (City Planning Commission / Council File)
+        DIR     → case_dir  (Director of Planning)
+        ENV     → case_env  (CEQA Environmental Review)
+        other   → case_document (unknown prefix; conservative fallback)
+    """
+    m = _RE_CASE_PREFIX.match(case_number.strip())
+    if not m:
+        return DOC_TYPE_CASE_DOCUMENT
+    prefix = m.group(1).upper()
+    if prefix in ("ZA", "AA"):
+        return DOC_TYPE_CASE_ZA
+    if prefix in ("CPC", "CF"):
+        return DOC_TYPE_CASE_CPC
+    if prefix == "DIR":
+        return DOC_TYPE_CASE_DIR
+    if prefix == "ENV":
+        return DOC_TYPE_CASE_ENV
+    return DOC_TYPE_CASE_DOCUMENT
+
+
+_CASE_TYPE_NOTES: dict[str, str] = {
+    DOC_TYPE_CASE_ZA: (
+        "ZA/AA (Zoning Administrator / Administrative Appeal) case number detected. "
+        "ZA decisions commonly affect setbacks, parking, height, and floor area adjustments. "
+        "Prefix is a scope hint only — case conditions have not been interpreted."
+    ),
+    DOC_TYPE_CASE_CPC: (
+        "CPC/CF (City Planning Commission / Council File) case number detected. "
+        "CPC decisions can affect FAR, density, use, height, and conditions of approval. "
+        "Prefix is a scope hint only — case conditions have not been interpreted."
+    ),
+    DOC_TYPE_CASE_DIR: (
+        "DIR (Director of Planning) case number detected. "
+        "DIR decisions vary in scope; conservatively interrupts all topics. "
+        "Prefix is a scope hint only — case conditions have not been interpreted."
+    ),
+    DOC_TYPE_CASE_ENV: (
+        "ENV (CEQA Environmental Review) case number detected. "
+        "ENV review accompanies large entitlements but does not directly impose dimensional "
+        "standards. FAR and density flagged because ENV review signals a significant "
+        "entitlement was processed. "
+        "Prefix is a scope hint only — case conditions have not been interpreted."
+    ),
+    DOC_TYPE_CASE_DOCUMENT: (
+        "Planning case number detected; prefix not recognized. "
+        "Case conditions may restrict or modify base zone entitlements. "
+        "Treat as interrupter — scope unknown."
+    ),
+}
+
+
+def _case_type_notes(subtype: str) -> str:
+    return _CASE_TYPE_NOTES.get(subtype, _CASE_TYPE_NOTES[DOC_TYPE_CASE_DOCUMENT])
 
 
 def _is_map_figure(name: str, url: str | None) -> bool:
@@ -240,6 +339,45 @@ def classify_candidates(
                         "density, parking, and setbacks. Subarea placement is manual."
                     ),
                 )
+            elif _is_cdo(raw):
+                _record_or_merge(
+                    candidates_for_record=[cand],
+                    doc_type=DOC_TYPE_OVERLAY_CDO,
+                    doc_label=raw,
+                    usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                    doc_type_confidence="confirmed",
+                    doc_type_notes=(
+                        "Coastal Development Overlay (CDO) detected by name. "
+                        "CDO can govern setbacks, height, FAR, and parking in Coastal Zone areas. "
+                        "Subtype recognized; CDO standards have not been interpreted."
+                    ),
+                )
+            elif _is_ha(raw):
+                _record_or_merge(
+                    candidates_for_record=[cand],
+                    doc_type=DOC_TYPE_OVERLAY_HA,
+                    doc_label=raw,
+                    usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                    doc_type_confidence="confirmed",
+                    doc_type_notes=(
+                        "Hillside Area (HA) detected by name. "
+                        "HA standards govern FAR, height, and setbacks in hillside terrain. "
+                        "Subtype recognized; HA standards have not been interpreted."
+                    ),
+                )
+            elif _is_po(raw):
+                _record_or_merge(
+                    candidates_for_record=[cand],
+                    doc_type=DOC_TYPE_OVERLAY_PO,
+                    doc_label=raw,
+                    usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                    doc_type_confidence="confirmed",
+                    doc_type_notes=(
+                        "Pedestrian Oriented District (PO/POD) detected by name. "
+                        "PO typically modifies parking minimums and front setback requirements. "
+                        "Subtype recognized; PO standards have not been interpreted."
+                    ),
+                )
             elif _is_supplemental(raw):
                 _record_or_merge(
                     candidates_for_record=[cand],
@@ -321,16 +459,14 @@ def classify_candidates(
 
         # — Case number —
         elif pattern == PATTERN_CASE_NUMBER:
+            subtype = _case_subtype(raw)
             _record_or_merge(
                 candidates_for_record=[cand],
-                doc_type=DOC_TYPE_CASE_DOCUMENT,
+                doc_type=subtype,
                 doc_label=raw.upper(),
                 usability_posture=POSTURE_CONFIDENCE_INTERRUPTER_ONLY,
                 doc_type_confidence="confirmed",
-                doc_type_notes=(
-                    "Planning case number detected. Case conditions may restrict "
-                    "or modify base zone entitlements. Treat as interrupter."
-                ),
+                doc_type_notes=_case_type_notes(subtype),
             )
 
         # — URL in text —
@@ -416,7 +552,7 @@ def classify_candidates(
                     source_ordinance_number=cand.source_ordinance_number,
                 )
             elif sf == "zone_string_parse:supplemental_district":
-                # Same dispatch logic as PATTERN_OVERLAY_NAME_FIELD
+                # Same dispatch logic as PATTERN_OVERLAY_NAME_FIELD — subtype first.
                 if _is_cpio(raw):
                     _record_or_merge(
                         candidates_for_record=[cand],
@@ -427,6 +563,45 @@ def classify_candidates(
                         doc_type_notes=(
                             "CPIO detected via zone string parser (supplemental district). "
                             "Subarea placement is manual."
+                        ),
+                    )
+                elif _is_cdo(raw):
+                    _record_or_merge(
+                        candidates_for_record=[cand],
+                        doc_type=DOC_TYPE_OVERLAY_CDO,
+                        doc_label=raw,
+                        usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                        doc_type_confidence="confirmed",
+                        doc_type_notes=(
+                            "Coastal Development Overlay (CDO) detected via zone string parser. "
+                            "CDO can govern setbacks, height, FAR, and parking in Coastal Zone areas. "
+                            "Subtype recognized; CDO standards have not been interpreted."
+                        ),
+                    )
+                elif _is_ha(raw):
+                    _record_or_merge(
+                        candidates_for_record=[cand],
+                        doc_type=DOC_TYPE_OVERLAY_HA,
+                        doc_label=raw,
+                        usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                        doc_type_confidence="confirmed",
+                        doc_type_notes=(
+                            "Hillside Area (HA) detected via zone string parser. "
+                            "HA standards govern FAR, height, and setbacks in hillside terrain. "
+                            "Subtype recognized; HA standards have not been interpreted."
+                        ),
+                    )
+                elif _is_po(raw):
+                    _record_or_merge(
+                        candidates_for_record=[cand],
+                        doc_type=DOC_TYPE_OVERLAY_PO,
+                        doc_label=raw,
+                        usability_posture=POSTURE_MANUAL_REVIEW_FIRST,
+                        doc_type_confidence="confirmed",
+                        doc_type_notes=(
+                            "Pedestrian Oriented District (PO/POD) detected via zone string parser. "
+                            "PO typically modifies parking minimums and front setback requirements. "
+                            "Subtype recognized; PO standards have not been interpreted."
                         ),
                     )
                 elif _is_supplemental(raw):

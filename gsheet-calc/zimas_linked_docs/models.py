@@ -20,11 +20,22 @@ DOC_TYPE_ORDINANCE = "ordinance"
 DOC_TYPE_SPECIFIC_PLAN = "specific_plan"
 DOC_TYPE_OVERLAY_CPIO = "overlay_cpio"
 DOC_TYPE_OVERLAY_SUPPLEMENTAL = "overlay_supplemental"
+# Recognized supplemental-district subtypes. Subtype recognition improves
+# interrupt routing; it does NOT mean these districts have been interpreted.
+DOC_TYPE_OVERLAY_CDO = "overlay_cdo"   # Coastal Development Overlay
+DOC_TYPE_OVERLAY_HA  = "overlay_ha"    # Hillside Area
+DOC_TYPE_OVERLAY_PO  = "overlay_po"    # Pedestrian Oriented District
 DOC_TYPE_Q_CONDITION = "q_condition"
 DOC_TYPE_D_LIMITATION = "d_limitation"
 DOC_TYPE_ZI_DOCUMENT = "zi_document"
 DOC_TYPE_MAP_FIGURE_PACKET = "map_figure_packet"
 DOC_TYPE_CASE_DOCUMENT = "case_document"
+# Recognized case-document subtypes. Prefix-based routing is a scope hint only;
+# it does NOT mean the case entitlement terms or conditions are known.
+DOC_TYPE_CASE_ZA  = "case_za"   # Zoning Administrator decisions (also AA appeals)
+DOC_TYPE_CASE_CPC = "case_cpc"  # City Planning Commission (also CF council files)
+DOC_TYPE_CASE_DIR = "case_dir"  # Director of Planning decisions
+DOC_TYPE_CASE_ENV = "case_env"  # CEQA Environmental Review
 DOC_TYPE_PLANNING_PAGE = "planning_page"
 DOC_TYPE_PDF_ARTIFACT = "pdf_artifact"
 DOC_TYPE_UNKNOWN_ARTIFACT = "unknown_artifact"
@@ -53,10 +64,49 @@ INTERRUPT_PROVISIONAL = "provisional"
 INTERRUPT_UNRESOLVED = "unresolved"
 INTERRUPT_REFUSE = "refuse_to_decide"
 
+# Interrupt rigor levels — describe the identity and evidence quality of a
+# triggering linked-authority record, not its content. Used in TriggerSummary.
+RIGOR_DETECTION_ONLY        = "detection_only"        # field presence; identity unconfirmed
+RIGOR_IDENTITY_CONFIRMED    = "identity_confirmed"    # name/number verified; content unknown
+RIGOR_STRUCTURALLY_NARROWED = "structurally_narrowed" # CPIO chapters confirmed; standards not read
+RIGOR_DOCUMENT_BACKED       = "document_backed"       # document fetched; surface fields extracted
+RIGOR_AMBIGUOUS_IDENTITY    = "ambiguous_identity"    # type or identity uncertain
+
 # Fetch decisions
 FETCH_NOW = "fetch_now"
 FETCH_DEFER = "defer"
 FETCH_NEVER = "never"
+
+# D/Q ordinance retrieval feasibility status — describes what is known about
+# the operative ordinance document identity and retrieval path.
+# Set by confidence.py; upgraded to ZI_CORROBORATED by orchestrator.py
+# when a fetched ZI record independently confirms the same ordinance number.
+# Only set on DOC_TYPE_Q_CONDITION and DOC_TYPE_D_LIMITATION records.
+DQ_RETRIEVAL_CANDIDATE_ONLY  = "candidate_only"   # type detected; no ordinance number
+DQ_RETRIEVAL_NUMBER_KNOWN    = "number_known"      # ordinance number confirmed; no retrieval URL
+DQ_RETRIEVAL_URL_KNOWN       = "url_known"         # stable direct-link URL available for document
+DQ_RETRIEVAL_ZI_CORROBORATED = "zi_corroborated"  # ZI record independently confirms the ordinance number
+
+# D/Q ordinance retrieval feasibility — forward-looking: what is the most
+# realistic next step to obtain the operative ordinance document?
+#
+# Based on authoritative investigation already recorded in
+# governing_docs/document_fetcher.py and governing_docs/document_models.py:
+#   - No deterministic URL pattern exists for LA City ordinance PDFs.
+#   - The PDIS (Planning Document Information System) is an Angular SPA;
+#     machine retrieval without browser automation is not viable.
+#   - ZI-mediated retrieval is the best realistic non-browser path:
+#     fetched ZI documents sometimes contain D/Q condition text inline.
+#   - Direct URL is only possible if the URL appears verbatim in the
+#     ZIMAS identify response (incidental, not engineered).
+#
+# This field is set alongside ordinance_retrieval_status in confidence.py
+# and upgraded to DQ_FEASIBILITY_ZI_MEDIATED by orchestrator.py when
+# ZI corroboration is established.
+DQ_FEASIBILITY_NO_KNOWN_PATH = "no_known_path"  # no number → no retrieval path; manual ZIMAS/LADBS lookup required first
+DQ_FEASIBILITY_BROWSER_ONLY  = "browser_only"   # number known; City Clerk search requires SPA browser session; no machine path
+DQ_FEASIBILITY_ZI_MEDIATED   = "zi_mediated"    # ZI corroborated; fetched ZI may contain condition text inline
+DQ_FEASIBILITY_URL_AVAILABLE  = "url_available"  # direct URL known; machine fetch is possible
 
 # Detection patterns (how a candidate was found)
 PATTERN_SPECIFIC_PLAN_FIELD = "specific_plan_field"
@@ -114,6 +164,51 @@ class LinkedDocCandidate(BaseModel):
     source_ordinance_number: str | None = None  # ordinance number if known at detection time
 
 
+# ── CPIO branch working-set models ───────────────────────────────────────────
+
+class BranchEntry(BaseModel):
+    """One chapter or figure in a CPIO branch selection result.
+
+    Produced by structure_extractor from cpio_fetch.BranchEntryData.
+    page_start / page_end are 1-indexed document page numbers (None = not recorded).
+    span_known=False means page data was not yet added to the known-structure
+    registry — it does NOT mean the item is missing from the document.
+    """
+    label: str
+    page_start: int | None = None
+    page_end: int | None = None
+    span_known: bool = False
+
+
+class BranchWorkingSet(BaseModel):
+    """Consolidated CPIO branch working-set for one LinkedDocRecord.
+
+    Represents the narrowed working set derived from parcel subarea context.
+    primary = subarea-specific chapters/figures (direct family match).
+    general = non-subarea chapters/figures (apply to all subareas, e.g. Ch. I).
+    excluded = chapters/figures for other subareas (outside this parcel's scope).
+
+    selection_confidence: strong / moderate / weak / uncertain
+        strong      — primary branches found; subarea unambiguous
+        moderate    — primary branches found; subarea was conflict-weakened
+        weak        — subarea provided but no chapter match; full doc surfaced
+        uncertain   — no subarea provided; full doc treated as in-scope
+
+    conflict_weakened: True when subarea context had conflicting alternatives,
+        capping branch confidence at "moderate".
+
+    span_coverage: full / partial / none — reflects page-span data availability
+        in the effective working set (primary + general).
+    """
+    primary: list[BranchEntry] = Field(default_factory=list)
+    general: list[BranchEntry] = Field(default_factory=list)
+    excluded: list[BranchEntry] = Field(default_factory=list)
+    selection_confidence: str = "uncertain"
+    conflict_weakened: bool = False
+    span_coverage: str = "none"
+    working_set_summary: str = ""
+
+
 # ── doc_classifier output ─────────────────────────────────────────────────────
 
 class LinkedDocRecord(BaseModel):
@@ -158,8 +253,33 @@ class LinkedDocRecord(BaseModel):
     extracted_district_name: str | None = None
     extraction_notes: str = ""
 
+    # Branch selection — populated by structure_extractor for CPIO records
+    # with known-structure matches. Labels are human-readable strings like
+    # "Chapter III: Central Commercial Subareas".
+    branch_primary_labels: list[str] = Field(default_factory=list)
+    branch_general_labels: list[str] = Field(default_factory=list)
+    branch_excluded_labels: list[str] = Field(default_factory=list)
+    branch_selection_confidence: str = ""  # "strong"/"moderate"/"weak"/"uncertain"/""
+    branch_selection_notes: str = ""
+    branch_conflict_weakened: bool = False  # True when narrowing context had conflicting values
+    # Consolidated branch working-set (None for non-CPIO records or when extraction
+    # was not attempted / structure unknown). Populated by structure_extractor.
+    branch_working_set: BranchWorkingSet | None = None
+
     # Confidence state — starts at detected_not_interpreted, upgraded explicitly
     confidence_state: str = CONF_DETECTED_NOT_INTERPRETED
+
+    # D/Q ordinance retrieval feasibility — only set on Q_CONDITION / D_LIMITATION records.
+    # Empty string for all other doc types.
+    # Set by confidence.py; may be upgraded to DQ_RETRIEVAL_ZI_CORROBORATED by orchestrator.py.
+    ordinance_retrieval_status: str = ""
+
+    # D/Q retrieval feasibility — forward-looking: the most realistic next step
+    # for obtaining the operative ordinance document. Uses DQ_FEASIBILITY_* constants.
+    # Empty string for all non-Q/D doc types.
+    # Ceiling for LA City ordinances is DQ_FEASIBILITY_BROWSER_ONLY unless
+    # a direct URL or ZI corroboration is present. See models.py constants block.
+    dq_retrieval_feasibility: str = ""
 
     issues: list[ZimasDocIssue] = Field(default_factory=list)
 
@@ -214,6 +334,22 @@ class FetchDecision(BaseModel):
 
 # ── gatekeeper output ─────────────────────────────────────────────────────────
 
+class TriggerSummary(BaseModel):
+    """Rigor classification for one record that triggered an InterruptDecision.
+
+    Describes what is *known* about the authority — not what it says.
+    rigor_level uses RIGOR_* constants to summarise identity and evidence quality.
+    rigor_detail gives a brief plain-English explanation for human readers.
+
+    This is an informational summary only. It does not change interrupt logic.
+    """
+    record_id: str
+    doc_label: str
+    doc_type: str
+    rigor_level: str    # one of RIGOR_* constants
+    rigor_detail: str   # brief plain-English explanation
+
+
 class InterruptDecision(BaseModel):
     """Gatekeeper decision for one calc-module topic.
 
@@ -229,6 +365,7 @@ class InterruptDecision(BaseModel):
     interrupt_level: str        # INTERRUPT_* constant
     triggering_record_ids: list[str] = Field(default_factory=list)
     triggering_doc_labels: list[str] = Field(default_factory=list)
+    triggering_rigor: list[TriggerSummary] = Field(default_factory=list)
     reason: str = ""
     recommended_action: str = ""
     blocking: bool = False      # True when interrupt_level is UNRESOLVED or REFUSE
@@ -304,6 +441,11 @@ class ZimasLinkedDocInput(BaseModel):
     has_d_from_zone_string: bool = False         # [D] bracket or inline-D suffix detected by parser
     d_ordinance_number: str | None = None        # D ordinance number if parseable
     supplemental_districts_from_parse: list[str] = Field(default_factory=list)  # e.g. ["SP", "CDO"]
+
+    # Optional: parcel's CPIO subarea for branch-narrowing during structure extraction
+    # (e.g. "Central Commercial-C", "Regional Commercial"). Used by structure_extractor
+    # to narrow the CPIO chapter/figure working set to the relevant subarea family.
+    cpio_subarea: str | None = None
 
     # Calc topics to evaluate for interruption (defaults to all standard topics)
     topics_to_evaluate: list[str] = Field(
