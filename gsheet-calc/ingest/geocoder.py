@@ -7,6 +7,7 @@ Uses caching and a custom identifying User-Agent.
 """
 
 import json
+import re
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -14,6 +15,35 @@ from pathlib import Path
 import requests
 
 from config.settings import GEOCODER_MIN_DELAY_SEC, GEOCODER_USER_AGENT, RAW_CACHE_DIR
+
+
+def normalize_address(address: str) -> str:
+    """Light cleanup of an address string to improve geocoding hit rate.
+
+    Fixes common issues: extra whitespace, title-casing, and ensures
+    'Los Angeles' and state/zip are present when missing.
+    """
+    # Collapse whitespace
+    addr = " ".join(address.split())
+
+    # Title-case the street portion for consistency
+    # (Nominatim is case-insensitive, but cache keys benefit from consistency)
+    addr = addr.strip().title()
+
+    # Normalise common abbreviations Nominatim handles poorly
+    # e.g. "Blvd" -> "Boulevard" isn't needed — Nominatim handles those.
+    # But ensure city/state are present if user only typed a street.
+    parts = [p.strip() for p in addr.split(",")]
+    lower_joined = addr.lower()
+    if "los angeles" not in lower_joined and "la" not in lower_joined:
+        # If no city at all, append Los Angeles, CA
+        if len(parts) == 1:
+            addr = f"{parts[0]}, Los Angeles, CA"
+    elif len(parts) >= 2 and "ca" not in parts[-1].lower() and not re.search(r"\d{5}", parts[-1]):
+        # Has city but no state — append CA
+        addr = f"{addr}, CA"
+
+    return addr
 
 
 class GeocoderProvider(ABC):
@@ -76,5 +106,16 @@ class Geocoder:
         self.provider = provider or NominatimProvider()
 
     def geocode(self, address: str) -> tuple[float, float] | None:
-        """Return (lat, lng) or None."""
-        return self.provider.geocode(address)
+        """Return (lat, lng) or None.
+
+        Tries the raw address first, then a normalized variant if that fails.
+        """
+        result = self.provider.geocode(address)
+        if result is not None:
+            return result
+
+        # Retry with normalized address
+        cleaned = normalize_address(address)
+        if cleaned != address:
+            return self.provider.geocode(cleaned)
+        return None

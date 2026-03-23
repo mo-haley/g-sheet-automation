@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KFA Feasibility Tool</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 720px; margin: 0 auto; padding: 24px; overflow: hidden; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 0.82rem; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+    .card h2 { font-size: 1rem; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 2px solid #2F5496; color: #2F5496; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-row.single { grid-template-columns: 1fr; }
+    .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row.quad { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; min-width: 0; }
+    .form-group label { font-size: 0.78rem; font-weight: 600; color: #555; margin-bottom: 3px; }
+    .form-group input, .form-group select { padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88rem; max-width: 100%; min-width: 0; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #2F5496; box-shadow: 0 0 0 2px rgba(47,84,150,0.15); }
+    .form-group .hint { font-size: 0.68rem; color: #999; margin-top: 2px; }
+    .checkbox-group { flex-direction: row; align-items: center; gap: 8px; }
+    .checkbox-group input[type="checkbox"] { width: auto; }
+    .section-note { font-size: 0.73rem; color: #888; margin-bottom: 12px; font-style: italic; }
+
+    /* Policy path radio group */
+    .policy-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .policy-option { position: relative; }
+    .policy-option input { position: absolute; opacity: 0; }
+    .policy-option label {
+      display: block; padding: 8px 16px; border: 1px solid #ccc; border-radius: 5px;
+      font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .policy-option input:checked + label { background: #2F5496; color: #fff; border-color: #2F5496; }
+    .policy-option label:hover { border-color: #2F5496; }
+
+    /* Affordability sub-section */
+    .affordability-inputs { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; }
+    .affordability-inputs.visible { display: block; }
+
+    /* Conditional sub-sections */
+    .conditional-section { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; }
+    .conditional-section.visible { display: block; }
+
+    /* Parking strategy */
+    .parking-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .parking-option { position: relative; }
+    .parking-option input { position: absolute; opacity: 0; }
+    .parking-option label {
+      display: block; padding: 8px 14px; border: 1px solid #ccc; border-radius: 5px;
+      font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    }
+    .parking-option input:checked + label { background: #2F5496; color: #fff; border-color: #2F5496; }
+    .parking-option label:hover { border-color: #2F5496; }
+
+    /* Advanced section */
+    .advanced-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.82rem; color: #2F5496; font-weight: 600; margin-bottom: 12px; user-select: none; }
+    .advanced-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+    .advanced-toggle.open .arrow { transform: rotate(90deg); }
+    .advanced-content { display: none; }
+    .advanced-content.visible { display: block; }
+
+    .submit-row { margin-top: 24px; text-align: center; }
+    .submit-btn { background: #2F5496; color: #fff; border: none; padding: 14px 48px; font-size: 1rem; font-weight: 600; border-radius: 6px; cursor: pointer; }
+    .submit-btn:hover { background: #1d3a6a; }
+    .submit-btn:disabled { background: #999; cursor: wait; }
+    .error { background: #fce4ec; border: 1px solid #e57373; color: #c62828; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 0.88rem; }
+    .spinner { display: none; margin-left: 8px; }
+    .loading .spinner { display: inline; }
+    .loading .btn-text { display: none; }
+    .disclaimer { font-size: 0.68rem; color: #999; text-align: center; margin-top: 24px; font-style: italic; }
+
+    @media (max-width: 600px) {
+      .form-row, .form-row.triple, .form-row.quad { grid-template-columns: 1fr; }
+      .policy-options, .parking-options { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>KFA Feasibility Tool</h1>
+    <p class="subtitle">First-pass zoning feasibility for LA multifamily projects</p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/run" id="calcForm">
+
+      <!-- 1. Site -->
+      <div class="card">
+        <h2>Site</h2>
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="address">Street Address *</label>
+            <input type="text" id="address" name="address" required placeholder="1234 W 7th St, Los Angeles, CA 90017" value="{{ request.form.get('address', '') }}">
+            <span class="hint">Street number + street name + city + state + ZIP. Example: 1425 S Robertson Blvd, Los Angeles, CA 90035. Zone, height district, TOC tier, and lot area auto-pulled from ZIMAS.</span>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="project_name">Project Name</label>
+            <input type="text" id="project_name" name="project_name" placeholder="Optional" value="{{ request.form.get('project_name', '') }}">
+          </div>
+          <div class="form-group">
+            <label for="application_date">Application Date</label>
+            <input type="date" id="application_date" name="application_date" value="{{ request.form.get('application_date', '') }}">
+            <span class="hint">Code rules are date-sensitive. Defaults to today.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Program -->
+      <div class="card">
+        <h2>Program</h2>
+        <p class="section-note">Unit counts drive density, parking, and open space calculations.</p>
+        <div class="form-row quad">
+          <div class="form-group">
+            <label for="studios">Studios</label>
+            <input type="number" id="studios" name="studios" min="0" value="{{ request.form.get('studios', '0') }}">
+          </div>
+          <div class="form-group">
+            <label for="one_br">1-Bedrooms</label>
+            <input type="number" id="one_br" name="one_br" min="0" value="{{ request.form.get('one_br', '0') }}">
+          </div>
+          <div class="form-group">
+            <label for="two_br">2-Bedrooms</label>
+            <input type="number" id="two_br" name="two_br" min="0" value="{{ request.form.get('two_br', '0') }}">
+          </div>
+          <div class="form-group">
+            <label for="three_br">3-Bedrooms</label>
+            <input type="number" id="three_br" name="three_br" min="0" value="{{ request.form.get('three_br', '0') }}">
+          </div>
+        </div>
+
+        <!-- Commercial toggle -->
+        <div class="form-row single">
+          <div class="form-group checkbox-group">
+            <input type="checkbox" id="includes_commercial" name="includes_commercial" {{ 'checked' if request.form.get('includes_commercial') }}>
+            <label for="includes_commercial" style="font-size: 0.82rem;">Includes commercial</label>
+            <span class="hint" style="margin-left: 4px;">Check if the project includes retail, restaurant, office, or other commercial space.</span>
+          </div>
+        </div>
+
+        <!-- Commercial fields (conditional) -->
+        <div class="conditional-section" id="commercialInputs">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="com_type">Commercial Type</label>
+              <select id="com_type" name="com_type">
+                <option value="">Select...</option>
+                <option value="retail" {{ 'selected' if request.form.get('com_type') == 'retail' }}>Retail</option>
+                <option value="office" {{ 'selected' if request.form.get('com_type') == 'office' }}>Office</option>
+                <option value="restaurant" {{ 'selected' if request.form.get('com_type') == 'restaurant' }}>Restaurant</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="com_area">Commercial Area (sf)</label>
+              <input type="number" id="com_area" name="com_area" min="0" value="{{ request.form.get('com_area', '') }}" placeholder="e.g. 3000">
+              <span class="hint">Total commercial square footage in the project.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Entitlement / Policy Path -->
+      <div class="card">
+        <h2>Entitlement / Policy Path</h2>
+        <p class="section-note">Select the incentive program to test. Base zoning results are always included for comparison.</p>
+        <div class="policy-options">
+          <div class="policy-option">
+            <input type="radio" id="path_base" name="policy_path" value="base_zoning" {{ 'checked' if not request.form.get('policy_path') or request.form.get('policy_path') == 'base_zoning' }}>
+            <label for="path_base">Base Zoning Only</label>
+          </div>
+          <div class="policy-option">
+            <input type="radio" id="path_toc" name="policy_path" value="toc" {{ 'checked' if request.form.get('policy_path') == 'toc' }}>
+            <label for="path_toc">TOC</label>
+          </div>
+          <div class="policy-option">
+            <input type="radio" id="path_db" name="policy_path" value="density_bonus" {{ 'checked' if request.form.get('policy_path') == 'density_bonus' }}>
+            <label for="path_db">Density Bonus</label>
+          </div>
+          <div class="policy-option">
+            <input type="radio" id="path_aff" name="policy_path" value="affordable_100" {{ 'checked' if request.form.get('policy_path') == 'affordable_100' }}>
+            <label for="path_aff">100% Affordable</label>
+          </div>
+        </div>
+
+        <!-- Affordability inputs - shown when TOC/DB/100% selected -->
+        <div class="affordability-inputs" id="affordabilityInputs">
+          <p class="section-note">Affordability mix (% of total units)</p>
+          <div class="form-row quad">
+            <div class="form-group">
+              <label for="eli_pct">ELI %</label>
+              <input type="number" id="eli_pct" name="eli_pct" min="0" max="100" step="0.1" value="{{ request.form.get('eli_pct', '0') }}">
+            </div>
+            <div class="form-group">
+              <label for="vli_pct">VLI %</label>
+              <input type="number" id="vli_pct" name="vli_pct" min="0" max="100" step="0.1" value="{{ request.form.get('vli_pct', '0') }}">
+            </div>
+            <div class="form-group">
+              <label for="li_pct">LI %</label>
+              <input type="number" id="li_pct" name="li_pct" min="0" max="100" step="0.1" value="{{ request.form.get('li_pct', '0') }}">
+            </div>
+            <div class="form-group">
+              <label for="moderate_pct">Moderate %</label>
+              <input type="number" id="moderate_pct" name="moderate_pct" min="0" max="100" step="0.1" value="{{ request.form.get('moderate_pct', '0') }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Site Modifiers -->
+      <div class="card">
+        <h2>Site Modifiers</h2>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label for="ded_street">Street Dedication (ft)</label>
+            <input type="number" id="ded_street" name="ded_street" min="0" step="0.5" value="{{ request.form.get('ded_street', '0') }}">
+            <span class="hint">Required public right-of-way dedication, if any. Can reduce effective buildable area.</span>
+          </div>
+          <div class="form-group checkbox-group" style="padding-top: 18px;">
+            <input type="checkbox" id="alley_adjacent" name="alley_adjacent" {{ 'checked' if request.form.get('alley_adjacent') }}>
+            <label for="alley_adjacent" style="font-size: 0.82rem;">Alley adjacent</label>
+          </div>
+          <div class="form-group">
+            <label for="corner_cuts">Corner Cuts (sf)</label>
+            <input type="number" id="corner_cuts" name="corner_cuts" min="0" step="1" value="{{ request.form.get('corner_cuts', '0') }}">
+          </div>
+        </div>
+
+        <!-- Alley dedication (conditional on alley_adjacent) -->
+        <div class="conditional-section" id="alleyInputs">
+          <div class="form-row single" style="max-width: 240px;">
+            <div class="form-group">
+              <label for="ded_alley">Alley Dedication (ft)</label>
+              <input type="number" id="ded_alley" name="ded_alley" min="0" step="0.5" value="{{ request.form.get('ded_alley', '0') }}">
+              <span class="hint">Required alley dedication, if any. Can reduce effective buildable depth or area.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Parking Strategy -->
+      <div class="card">
+        <h2>Parking Strategy</h2>
+        <p class="section-note">Select your expected parking approach. This helps frame parking-related feasibility outputs.</p>
+        <div class="parking-options">
+          <div class="parking-option">
+            <input type="radio" id="park_none" name="parking_strategy" value="none" {{ 'checked' if not request.form.get('parking_strategy') or request.form.get('parking_strategy') == 'none' }}>
+            <label for="park_none">Undecided / Assume minimum</label>
+          </div>
+          <div class="parking-option">
+            <input type="radio" id="park_surface" name="parking_strategy" value="surface" {{ 'checked' if request.form.get('parking_strategy') == 'surface' }}>
+            <label for="park_surface">Surface</label>
+          </div>
+          <div class="parking-option">
+            <input type="radio" id="park_podium" name="parking_strategy" value="podium" {{ 'checked' if request.form.get('parking_strategy') == 'podium' }}>
+            <label for="park_podium">Podium</label>
+          </div>
+          <div class="parking-option">
+            <input type="radio" id="park_sub" name="parking_strategy" value="subterranean" {{ 'checked' if request.form.get('parking_strategy') == 'subterranean' }}>
+            <label for="park_sub">Subterranean</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Assumptions -->
+      <div class="card">
+        <div class="advanced-toggle" id="advancedToggle" onclick="toggleAdvanced()">
+          <span class="arrow">&#9654;</span> Advanced Assumptions
+        </div>
+        <div class="advanced-content" id="advancedContent">
+          <p class="section-note">These fields are rarely needed for first-pass feasibility. Override only if you have specific information.</p>
+
+          <!-- Overrides -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="parking_total">Override: Total Parking Spaces</label>
+              <input type="number" id="parking_total" name="parking_total" min="0" value="{{ request.form.get('parking_total', '') }}" placeholder="Leave blank for calculated minimum">
+              <span class="hint">Leave blank to use the calculated code minimum. Enter only if the project has a specific planned space count.</span>
+            </div>
+            <div class="form-group">
+              <label for="lot_area_override">Override: Lot Area (sf)</label>
+              <input type="number" id="lot_area_override" name="lot_area_override" min="0" step="1" value="{{ request.form.get('lot_area_override', '') }}" placeholder="Leave blank to use ZIMAS">
+              <span class="hint">Leave blank to use the ZIMAS lot area. Enter only if you have a survey-confirmed area that differs.</span>
+            </div>
+          </div>
+
+          <!-- Commercial floor level (conditional on includes_commercial) -->
+          <div class="form-row triple" id="advancedCommercialRow">
+            <div class="form-group">
+              <label for="com_floor">Commercial Floor Level</label>
+              <input type="text" id="com_floor" name="com_floor" value="{{ request.form.get('com_floor', '1') }}">
+            </div>
+          </div>
+
+          <!-- Alley dimensions (conditional on alley_adjacent) -->
+          <div class="form-row" id="advancedAlleyRow">
+            <div class="form-group">
+              <label for="alley_width">Alley Width (ft)</label>
+              <input type="number" id="alley_width" name="alley_width" min="0" step="0.5" value="{{ request.form.get('alley_width', '') }}" placeholder="e.g. 20">
+            </div>
+            <div class="form-group">
+              <label for="alley_frontage">Alley Frontage (ft)</label>
+              <input type="number" id="alley_frontage" name="alley_frontage" min="0" step="0.5" value="{{ request.form.get('alley_frontage', '') }}" placeholder="e.g. 150">
+            </div>
+          </div>
+
+          <!-- Policy-specific fields (conditional on entitlement path) -->
+          <div class="form-row" id="advancedPolicyRow">
+            <div class="form-group checkbox-group" id="prevailingWageGroup">
+              <input type="checkbox" id="prevailing_wage" name="prevailing_wage" value="true" {{ 'checked' if request.form.get('prevailing_wage') }}>
+              <label for="prevailing_wage" style="font-size: 0.82rem;">Prevailing wage committed</label>
+            </div>
+            <div class="form-group checkbox-group" id="commercialCorridorGroup">
+              <input type="checkbox" id="commercial_corridor" name="commercial_corridor" value="true" {{ 'checked' if request.form.get('commercial_corridor') }}>
+              <label for="commercial_corridor" style="font-size: 0.82rem;">Commercial corridor frontage (AB 2011)</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="btn-text">Run Feasibility Analysis</span>
+          <span class="spinner">Analyzing... (geocoding + ZIMAS query may take a few seconds)</span>
+        </button>
+        <div style="margin-top: 12px;">
+          <button type="submit" formaction="/run-address" class="submit-btn" id="addressOnlyBtn" style="background: #fff; color: #2F5496; border: 1px solid #2F5496; padding: 10px 32px; font-size: 0.88rem;">
+            <span class="btn-text">Address-Only Screening</span>
+            <span class="spinner">Screening... (geocoding + ZIMAS query may take a few seconds)</span>
+          </button>
+          <div style="font-size: 0.72rem; color: #888; margin-top: 4px;">No project inputs needed. Shows site-derived feasibility snapshot with scenario comparison.</div>
+        </div>
+      </div>
+    </form>
+
+    <p class="disclaimer">Preliminary internal analysis only. Not for final code determination without professional review. Tool v1.1.0-demo | 2025 CBC / LAMC Rev. 7</p>
+  </div>
+
+  <script>
+    // Form submit loading state
+    document.getElementById('calcForm').addEventListener('submit', function(e) {
+      var clicked = e.submitter || document.getElementById('submitBtn');
+      clicked.disabled = true;
+      clicked.classList.add('loading');
+    });
+
+    // Advanced toggle
+    function toggleAdvanced() {
+      var toggle = document.getElementById('advancedToggle');
+      var content = document.getElementById('advancedContent');
+      toggle.classList.toggle('open');
+      content.classList.toggle('visible');
+    }
+
+    // --- Conditional visibility helpers ---
+
+    function setVisible(el, visible) {
+      if (!el) return;
+      if (visible) {
+        el.classList.add('visible');
+      } else {
+        el.classList.remove('visible');
+      }
+    }
+
+    function setRowVisible(el, visible) {
+      if (!el) return;
+      el.style.display = visible ? '' : 'none';
+    }
+
+    function resetInputs(container) {
+      if (!container) return;
+      container.querySelectorAll('input[type="number"], input[type="text"]').forEach(function(input) {
+        if (input.type === 'number') input.value = '';
+        if (input.type === 'text') input.value = input.defaultValue || '';
+      });
+      container.querySelectorAll('select').forEach(function(sel) {
+        sel.selectedIndex = 0;
+      });
+      container.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+        cb.checked = false;
+      });
+    }
+
+    // 1. Commercial toggle
+    function updateCommercialVisibility() {
+      var checked = document.getElementById('includes_commercial').checked;
+      var section = document.getElementById('commercialInputs');
+      var advRow = document.getElementById('advancedCommercialRow');
+      setVisible(section, checked);
+      setRowVisible(advRow, checked);
+      if (!checked) {
+        resetInputs(section);
+        resetInputs(advRow);
+      }
+    }
+    document.getElementById('includes_commercial').addEventListener('change', updateCommercialVisibility);
+
+    // 2. Alley adjacent toggle
+    function updateAlleyVisibility() {
+      var checked = document.getElementById('alley_adjacent').checked;
+      var section = document.getElementById('alleyInputs');
+      var advRow = document.getElementById('advancedAlleyRow');
+      setVisible(section, checked);
+      setRowVisible(advRow, checked);
+      if (!checked) {
+        resetInputs(section);
+        resetInputs(advRow);
+      }
+    }
+    document.getElementById('alley_adjacent').addEventListener('change', updateAlleyVisibility);
+
+    // 3. Affordability inputs (existing behavior)
+    function updateAffordabilityVisibility() {
+      var selected = document.querySelector('input[name="policy_path"]:checked');
+      var affSection = document.getElementById('affordabilityInputs');
+      if (selected && (selected.value === 'toc' || selected.value === 'density_bonus' || selected.value === 'affordable_100')) {
+        affSection.classList.add('visible');
+      } else {
+        affSection.classList.remove('visible');
+        resetInputs(affSection);
+      }
+    }
+
+    // 4. Policy-specific advanced fields
+    function updatePolicyAdvancedVisibility() {
+      var selected = document.querySelector('input[name="policy_path"]:checked');
+      var val = selected ? selected.value : 'base_zoning';
+      var policyRow = document.getElementById('advancedPolicyRow');
+      var pwGroup = document.getElementById('prevailingWageGroup');
+      var ccGroup = document.getElementById('commercialCorridorGroup');
+
+      // Prevailing wage: show for TOC, DB, 100% Affordable
+      var showPW = (val === 'toc' || val === 'density_bonus' || val === 'affordable_100');
+      setRowVisible(pwGroup, showPW);
+      if (!showPW) {
+        var pwCb = document.getElementById('prevailing_wage');
+        if (pwCb) pwCb.checked = false;
+      }
+
+      // AB 2011 corridor: show for DB, 100% Affordable
+      var showCC = (val === 'density_bonus' || val === 'affordable_100');
+      setRowVisible(ccGroup, showCC);
+      if (!showCC) {
+        var ccCb = document.getElementById('commercial_corridor');
+        if (ccCb) ccCb.checked = false;
+      }
+
+      // Hide entire row if nothing visible
+      setRowVisible(policyRow, showPW || showCC);
+    }
+
+    // Bind policy path change to both affordability and policy-advanced visibility
+    document.querySelectorAll('input[name="policy_path"]').forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        updateAffordabilityVisibility();
+        updatePolicyAdvancedVisibility();
+      });
+    });
+
+    // Init all conditional visibility on load
+    updateCommercialVisibility();
+    updateAlleyVisibility();
+    updateAffordabilityVisibility();
+    updatePolicyAdvancedVisibility();
+  </script>
+</body>
+</html>
