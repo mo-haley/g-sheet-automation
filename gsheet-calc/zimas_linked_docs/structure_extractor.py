@@ -37,6 +37,7 @@ from zimas_linked_docs.models import (
     DOC_TYPE_MAP_FIGURE_PACKET,
     FETCH_NOW,
 )
+from zimas_linked_docs.zi_fetch import run_zi_fetch
 
 
 def extract_surface_fields(
@@ -104,35 +105,54 @@ def extract_surface_fields(
 
 
 def _extract_zi(record: LinkedDocRecord, issues: list[ZimasDocIssue]) -> None:
-    """Extract surface fields from a LADBS ZI document.
+    """Fetch and extract surface fields from a LADBS ZI document.
 
-    Target fields:
-        extracted_title         — ZI document subject line
-        extracted_ordinance_number — if ordinance reference is in header
-        extraction_notes        — effective date, source note
+    Calls run_zi_fetch() which handles URL construction, HEAD verification,
+    GET fetch/cache, and minimal pdfplumber header extraction.
 
-    Source: LADBS ZI memo PDF or HTML at:
-        https://ladbs.org/services/core-services/inspection-construction-services/zoning-information-files
-
-    Stub: not yet implemented. Mark as skipped with contract note.
+    Populates on the record:
+        fetch_attempted, fetch_status, fetch_notes
+        extracted_title, extracted_ordinance_number, extraction_notes
     """
-    record.fetch_status = "skipped"
-    record.fetch_notes = (
-        "ZI extractor stub. "
-        "When implemented: fetch from LADBS ZI lookup by ZI number in doc_label. "
-        "Extract: subject/title, effective date, LAMC reference in header. "
-        "Stop before rule content."
-    )
-    issues.append(
-        ZimasDocIssue(
+    result = run_zi_fetch(doc_label=record.doc_label)
+    record.fetch_attempted = True
+
+    if result.fetch_status == "failed":
+        record.fetch_status = "failed"
+        record.fetch_notes = result.fetch_notes
+        issues.append(ZimasDocIssue(
             step="structure_extractor",
             field=record.record_id,
-            severity="info",
-            message=f"ZI extractor not yet implemented for {record.doc_label}.",
-            action_required="Retrieve ZI document manually from LADBS and confirm subject line.",
+            severity="error",
+            message=f"ZI fetch failed for {record.doc_label}: {result.fetch_notes}",
+            action_required="Retrieve ZI document manually from LADBS.",
+            confidence_impact="none",  # confidence.py responds to fetch_status=failed
+        ))
+        return
+
+    record.fetch_status = "success"
+    record.fetch_notes = result.fetch_notes
+    record.extracted_title = result.extracted_title
+    record.extracted_ordinance_number = result.extracted_ordinance_number
+
+    extraction_note_parts = [result.extraction_notes]
+    if result.url_verify_notes:
+        extraction_note_parts.insert(0, f"URL verify: {result.url_verify_notes}")
+    record.extraction_notes = "; ".join(p for p in extraction_note_parts if p)
+
+    if result.extraction_quality in ("weak", "failed"):
+        issues.append(ZimasDocIssue(
+            step="structure_extractor",
+            field=record.record_id,
+            severity="warning",
+            message=(
+                f"{record.doc_label} fetched but PDF extraction quality was "
+                f"'{result.extraction_quality}'. "
+                f"Extracted title: {result.extracted_title or 'none'}."
+            ),
+            action_required="Manually verify ZI document contents.",
             confidence_impact="none",
-        )
-    )
+        ))
 
 
 def _extract_cpio(record: LinkedDocRecord, issues: list[ZimasDocIssue]) -> None:

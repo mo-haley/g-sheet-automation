@@ -234,6 +234,40 @@ class InterruptDecision(BaseModel):
     blocking: bool = False      # True when interrupt_level is UNRESOLVED or REFUSE
 
 
+# ── Registry interpretation ───────────────────────────────────────────────────
+
+class RegistryInterpretation(BaseModel):
+    """Plain-language interpretation of a linked-document registry run.
+
+    Separates two orthogonal questions that are easy to conflate:
+
+        1. Search coverage quality  — how complete was the detection pass?
+                                      Captured by: coverage_level,
+                                                   may_have_undetected_authority
+        2. Detected record validity — are the records that WERE found correct?
+                                      Captured by: detected_records_are_valid,
+                                                   records_found
+
+    These are independent. A run can have uncertain coverage AND valid records.
+    "Uncertain coverage" means the search may have missed items. It does NOT
+    mean the detected records are suspect — those come from ZIMAS-verified
+    field data and should be treated as present.
+
+    The summary field states the interpretation in plain English so callers
+    can surface it in logs or UI without synthesising multiple fields.
+    """
+    coverage_level: str
+    # True when coverage is not "complete" — additional linked authority may
+    # exist beyond what was detected.
+    may_have_undetected_authority: bool
+    # Explicit assertion: detected records come from ZIMAS-verified sources
+    # (structured parcel fields, zone string parser). Coverage level does NOT
+    # imply record inaccuracy. Always True in current implementation.
+    detected_records_are_valid: bool = True
+    records_found: int
+    summary: str
+
+
 # ── Orchestrator input / output ───────────────────────────────────────────────
 
 class ZimasLinkedDocInput(BaseModel):
@@ -278,7 +312,22 @@ class ZimasLinkedDocInput(BaseModel):
 
 
 class ZimasLinkedDocOutput(BaseModel):
-    """Final output of the zimas_linked_docs orchestrator."""
+    """Final output of the zimas_linked_docs orchestrator.
+
+    Reading guide for callers:
+
+        interpretation.summary      — plain-English synthesis; start here
+        interrupt_decisions         — per-topic blocking decisions for calc modules
+        registry.records            — detected linked authority items (valid regardless of coverage)
+        registry_input_coverage     — how thorough was the search
+        all_issues                  — ordered diagnostic issues (input_coverage first,
+                                      then detection, classification, registry)
+
+    The two questions to answer from this output:
+        "What linked authority was found?" → registry.records, interrupt_decisions
+        "Can I trust that the search was complete?" → registry_input_coverage,
+                                                       interpretation.may_have_undetected_authority
+    """
     registry: LinkedDocRegistry = Field(default_factory=LinkedDocRegistry)
     interrupt_decisions: list[InterruptDecision] = Field(default_factory=list)
     candidates_detected: int = 0
@@ -290,3 +339,16 @@ class ZimasLinkedDocOutput(BaseModel):
     # "complete" means the search was thorough; anything else means sparse results
     # may be due to weak inputs, not genuine absence of linked authority.
     registry_input_coverage: str = INPUT_COVERAGE_PARTIAL
+
+    # Plain-language interpretation separating coverage quality from record validity.
+    # Always populated by the orchestrator. Default is a sentinel only — never
+    # returned to callers; the orchestrator overwrites it before returning.
+    interpretation: RegistryInterpretation = Field(
+        default_factory=lambda: RegistryInterpretation(
+            coverage_level=INPUT_COVERAGE_PARTIAL,
+            may_have_undetected_authority=True,
+            detected_records_are_valid=True,
+            records_found=0,
+            summary="Interpretation not yet computed.",
+        )
+    )

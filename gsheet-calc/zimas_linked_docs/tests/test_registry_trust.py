@@ -1,4 +1,4 @@
-"""Tests for registry trust / input coverage signaling.
+"""Tests for registry trust / input coverage signaling and interpretation semantics.
 
 Covers four scenarios:
 1. High-confidence sparse parcel — complete inputs, genuinely zero linked authority
@@ -33,7 +33,7 @@ from zimas_linked_docs.models import (
     INPUT_COVERAGE_UNCERTAIN,
     INTERRUPT_NONE,
 )
-from zimas_linked_docs.orchestrator import run_zimas_linked_doc_pipeline
+from zimas_linked_docs.orchestrator import run_zimas_linked_doc_pipeline, _build_interpretation
 from zimas_linked_docs.input_coverage import assess_input_coverage
 
 
@@ -358,3 +358,153 @@ class TestMixedSignalsPartialCoverage:
         inp = self._build_inp()
         coverage, _ = assess_input_coverage(inp)
         assert coverage != INPUT_COVERAGE_THIN
+
+
+# ── Test 5: uncertain coverage, zero records, all INTERRUPT_NONE ──────────────
+
+class TestUncertainCoverageZeroRecordsAllNone:
+    """Zone parse failed, no raw identify, no structured fields, no Q/D.
+
+    This is the previously-skipped scenario: coverage=uncertain, zero records
+    detected, and every topic produces INTERRUPT_NONE.
+
+    The core assertion: this must not look like a clean result.
+    - interpretation.may_have_undetected_authority must be True
+    - interpretation.summary must warn explicitly
+    - all INTERRUPT_NONE reasons must carry a WARNING caveat
+    - detected_records_are_valid must be True (schema assertion)
+    - coverage level must not be confused with record validity
+    """
+
+    def _build_inp(self):
+        return ZimasLinkedDocInput(
+            apn=None,               # no APN either — worst-case inputs
+            specific_plan=None,
+            overlay_zones=[],       # no structured fields
+            q_conditions=[],
+            d_limitations=[],
+            raw_zimas_identify={},  # no layer data
+            zoning_parse_confidence="unresolved",
+            zoning_parse_issues=["Unrecognized base zone in '[LF1'"],
+            has_q_from_zone_string=False,
+            q_ordinance_number=None,
+            has_d_from_zone_string=False,
+            d_ordinance_number=None,
+            supplemental_districts_from_parse=[],
+        )
+
+    def test_zero_records_detected(self):
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.records_classified == 0
+
+    def test_coverage_is_uncertain(self):
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.registry_input_coverage == INPUT_COVERAGE_UNCERTAIN
+
+    def test_all_topics_interrupt_none(self):
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        non_none = [d for d in out.interrupt_decisions if d.interrupt_level != INTERRUPT_NONE]
+        assert not non_none, (
+            f"Expected all INTERRUPT_NONE for zero records, got: "
+            f"{[(d.topic, d.interrupt_level) for d in non_none]}"
+        )
+
+    def test_all_interrupt_none_carry_warning_caveat(self):
+        """Every INTERRUPT_NONE with uncertain coverage must warn explicitly."""
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        for decision in out.interrupt_decisions:
+            assert decision.interrupt_level == INTERRUPT_NONE
+            assert "WARNING" in decision.reason, (
+                f"Expected WARNING in INTERRUPT_NONE reason for uncertain/zero-record run. "
+                f"Topic: {decision.topic}, reason: {decision.reason}"
+            )
+
+    def test_interpretation_may_have_undetected_true(self):
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.interpretation.may_have_undetected_authority is True
+
+    def test_interpretation_summary_warns_not_evidence(self):
+        """Summary must explicitly say this is not evidence of no linked authority."""
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        summary = out.interpretation.summary
+        assert "should NOT be treated as evidence" in summary, (
+            f"Expected 'should NOT be treated as evidence' in summary, got: {summary}"
+        )
+
+    def test_interpretation_records_are_valid_true(self):
+        """Even with uncertain coverage and zero records, schema assertion holds."""
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.interpretation.detected_records_are_valid is True
+
+    def test_interpretation_records_found_zero(self):
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.interpretation.records_found == 0
+
+    def test_coverage_vs_validity_separation(self):
+        """Uncertain coverage must not imply records are invalid.
+
+        This test exists specifically to catch regressions where coverage
+        degradation is incorrectly conflated with record inaccuracy.
+        """
+        out = run_zimas_linked_doc_pipeline(self._build_inp())
+        assert out.registry_input_coverage == INPUT_COVERAGE_UNCERTAIN
+        assert out.interpretation.detected_records_are_valid is True, (
+            "detected_records_are_valid must remain True regardless of coverage level. "
+            "Coverage uncertainty means the search may be incomplete — "
+            "it does NOT mean detected records are wrong."
+        )
+
+
+# ── Test 6: _build_interpretation unit tests ──────────────────────────────────
+
+class TestBuildInterpretation:
+    """Unit tests for the _build_interpretation helper in isolation."""
+
+    def test_complete_zero_records(self):
+        interp = _build_interpretation("complete", 0)
+        assert not interp.may_have_undetected_authority
+        assert interp.detected_records_are_valid
+        assert "plausibly trustworthy" in interp.summary
+        assert "should NOT" not in interp.summary
+
+    def test_complete_with_records(self):
+        interp = _build_interpretation("complete", 3)
+        assert not interp.may_have_undetected_authority
+        assert "plausibly complete" in interp.summary
+
+    def test_uncertain_zero_records(self):
+        interp = _build_interpretation("uncertain", 0)
+        assert interp.may_have_undetected_authority
+        assert "should NOT be treated as evidence" in interp.summary
+
+    def test_uncertain_with_records(self):
+        interp = _build_interpretation("uncertain", 4)
+        assert interp.may_have_undetected_authority
+        assert interp.detected_records_are_valid
+        # Records are valid, search is incomplete
+        assert "ZIMAS-verified" in interp.summary
+        assert "Additional linked authority may exist" in interp.summary
+
+    def test_partial_zero_records(self):
+        interp = _build_interpretation("partial", 0)
+        assert interp.may_have_undetected_authority
+        assert "should NOT be treated as evidence" in interp.summary
+
+    def test_thin_zero_records(self):
+        interp = _build_interpretation("thin", 0)
+        assert interp.may_have_undetected_authority
+        assert "should NOT be treated as evidence" in interp.summary
+
+    def test_records_found_mirrors_count(self):
+        interp = _build_interpretation("partial", 7)
+        assert interp.records_found == 7
+        assert "7 linked authority" in interp.summary
+
+    def test_detected_records_always_valid(self):
+        for level in ("complete", "partial", "thin", "uncertain"):
+            for count in (0, 1, 5):
+                interp = _build_interpretation(level, count)
+                assert interp.detected_records_are_valid is True, (
+                    f"detected_records_are_valid must always be True "
+                    f"(coverage={level}, records={count})"
+                )

@@ -34,6 +34,8 @@ from zimas_linked_docs.models import (
     ZimasLinkedDocInput,
     ZimasLinkedDocOutput,
     ZimasDocIssue,
+    RegistryInterpretation,
+    INPUT_COVERAGE_COMPLETE,
 )
 from zimas_linked_docs.input_coverage import assess_input_coverage
 from zimas_linked_docs.link_detector import detect_linked_docs
@@ -43,6 +45,65 @@ from zimas_linked_docs.fetch_policy import assign_fetch_decisions
 from zimas_linked_docs.structure_extractor import extract_surface_fields
 from zimas_linked_docs.confidence import assign_confidence_states
 from zimas_linked_docs.gatekeeper import evaluate_interrupts
+
+
+_COVERAGE_DESCRIPTIONS: dict[str, str] = {
+    "complete": "complete",
+    "partial": "partial (some detection sources absent)",
+    "thin": "thin (most detection sources absent)",
+    "uncertain": "uncertain (zone string parse failed)",
+}
+
+
+def _build_interpretation(
+    coverage_level: str,
+    records_found: int,
+) -> RegistryInterpretation:
+    """Construct a plain-language registry interpretation.
+
+    Explicitly separates search coverage quality (may we have missed items?)
+    from detected record validity (are the items we found correct?).
+    """
+    may_have_undetected = coverage_level != INPUT_COVERAGE_COMPLETE
+    coverage_desc = _COVERAGE_DESCRIPTIONS.get(coverage_level, coverage_level)
+
+    if records_found == 0:
+        if not may_have_undetected:
+            summary = (
+                f"Search coverage was {coverage_desc}. "
+                "No linked authority items detected. "
+                "Result is plausibly trustworthy."
+            )
+        else:
+            summary = (
+                f"Search coverage was {coverage_desc}. "
+                "No linked authority items detected, but inputs were insufficient "
+                "to complete the search. "
+                "This result should NOT be treated as evidence of no linked authority."
+            )
+    else:
+        if not may_have_undetected:
+            summary = (
+                f"{records_found} linked authority item(s) detected. "
+                f"Search coverage was {coverage_desc}. "
+                "Result is plausibly complete."
+            )
+        else:
+            summary = (
+                f"{records_found} linked authority item(s) detected from "
+                "ZIMAS-verified sources and should be acted on. "
+                f"Search coverage was {coverage_desc}. "
+                "Additional linked authority may exist that was not detected. "
+                "Detected records are valid regardless of coverage level."
+            )
+
+    return RegistryInterpretation(
+        coverage_level=coverage_level,
+        may_have_undetected_authority=may_have_undetected,
+        detected_records_are_valid=True,
+        records_found=records_found,
+        summary=summary,
+    )
 
 
 def run_zimas_linked_doc_pipeline(
@@ -103,6 +164,11 @@ def run_zimas_linked_doc_pipeline(
     )
     all_issues.extend(issues)
 
+    interpretation = _build_interpretation(
+        coverage_level=input_coverage,
+        records_found=len(records),
+    )
+
     return ZimasLinkedDocOutput(
         registry=registry,
         interrupt_decisions=interrupt_decisions,
@@ -111,4 +177,5 @@ def run_zimas_linked_doc_pipeline(
         fetch_decisions=fetch_decisions,
         all_issues=all_issues,
         registry_input_coverage=input_coverage,
+        interpretation=interpretation,
     )
