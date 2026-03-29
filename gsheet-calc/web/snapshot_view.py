@@ -733,7 +733,12 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
     return cards
 
 
-def _build_caveats(site: Site, app: AppResult) -> list[Caveat]:
+def _build_caveats(
+    site: Site,
+    app: AppResult,
+    project: Project | None = None,
+    policy_path_label: str = "",
+) -> list[Caveat]:
     caveats: list[Caveat] = []
 
     setback = _by_name(app.module_results, "setback")
@@ -747,15 +752,21 @@ def _build_caveats(site: Site, app: AppResult) -> list[Caveat]:
             consequence="Setback values cannot be computed per-edge; only zone-family rules are identified",
         ))
 
-    caveats.append(Caveat(
-        text="Project program not yet entered",
-        consequence="Parking and density remain provisional — final values require unit count, mix, and floor areas",
-    ))
+    has_units = project is not None and project.total_units > 0
+    has_policy = bool(policy_path_label) and policy_path_label != "Base Zoning Only"
+    has_affordability = project is not None and project.affordability is not None
 
-    caveats.append(Caveat(
-        text="Affordability/incentive path not selected",
-        consequence="Scenario comparisons are indicative only; TOC and State DB paths not confirmed",
-    ))
+    if not has_units:
+        caveats.append(Caveat(
+            text="Project program not yet entered",
+            consequence="Parking and density remain provisional — final values require unit count, mix, and floor areas",
+        ))
+
+    if not has_policy and not has_affordability:
+        caveats.append(Caveat(
+            text="Affordability/incentive path not selected",
+            consequence="Scenario comparisons are indicative only; TOC and State DB paths not confirmed",
+        ))
 
     if site.specific_plan or site.overlay_zones:
         caveats.append(Caveat(
@@ -1069,7 +1080,7 @@ def build_snapshot_view(
         scenarios=_build_scenarios(site, app),
         ed1_screening=_build_ed1_section(app),
         module_cards=_build_module_cards(app),
-        caveats=_build_caveats(site, app),
+        caveats=_build_caveats(site, app, project=project, policy_path_label=policy_path_label),
         best_next_inputs=_build_best_next_inputs(site, app),
         missing_inputs=_build_missing_inputs(),
         sources=_build_sources(site, app),
