@@ -85,6 +85,8 @@ class YardFormula(BaseModel):
     # Story increment: +story_increment_ft per story above story_threshold
     story_increment_ft: float | None = None
     story_threshold: int | None = None
+    # Maximum total side yard from story increments (e.g. 16 ft cap per Table 1b)
+    story_increment_max_ft: float | None = None
     # Rear yard only: reduction when abutting alley
     alley_reduction_ft: float | None = None
     parametric: bool = True

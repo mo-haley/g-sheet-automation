@@ -19,7 +19,8 @@
       "notes": "One-Family Zone"
     },
     "R2": {
-      "density_factor_sf": 2500,
+      "density_factor_sf": null,
+      "max_units_per_lot": 2,
       "min_lot_area_sf": 5000,
       "setbacks": {
         "front_ft": 20,
@@ -27,7 +28,7 @@
         "rear_ft": 15
       },
       "authority_id": "AUTH-ZONE-R2",
-      "notes": "Two-Family Zone"
+      "notes": "Two-Family Zone. Max 2 DU per lot per LAMC footnote 15; not a simple area/factor regime."
     },
     "RD1.5": {
       "density_factor_sf": 1500,
@@ -53,47 +54,47 @@
     },
     "RD3": {
       "density_factor_sf": 3000,
-      "min_lot_area_sf": 5000,
+      "min_lot_area_sf": 6000,
       "setbacks": {
         "front_ft": 15,
         "side_ft": 5,
         "rear_ft": 15
       },
       "authority_id": "AUTH-ZONE-RD",
-      "notes": "Restricted Density Multiple Dwelling Zone"
+      "notes": "Restricted Density Multiple Dwelling Zone. Side yard: 10% lot width, 10 ft max, 5 ft min per Table 1b."
     },
     "RD4": {
       "density_factor_sf": 4000,
-      "min_lot_area_sf": 5000,
+      "min_lot_area_sf": 8000,
       "setbacks": {
         "front_ft": 15,
         "side_ft": 5,
         "rear_ft": 15
       },
       "authority_id": "AUTH-ZONE-RD",
-      "notes": "Restricted Density Multiple Dwelling Zone"
+      "notes": "Restricted Density Multiple Dwelling Zone. Side yard: 10% lot width, 10 ft max, 5 ft min per Table 1b."
     },
     "RD5": {
       "density_factor_sf": 5000,
-      "min_lot_area_sf": 5000,
+      "min_lot_area_sf": 10000,
       "setbacks": {
-        "front_ft": 15,
-        "side_ft": 5,
-        "rear_ft": 15
+        "front_ft": 20,
+        "side_ft": 10,
+        "rear_ft": 25
       },
       "authority_id": "AUTH-ZONE-RD",
-      "notes": "Restricted Density Multiple Dwelling Zone"
+      "notes": "Restricted Density Multiple Dwelling Zone. RD5/RD6 have larger setbacks per Table 1b."
     },
     "RD6": {
       "density_factor_sf": 6000,
-      "min_lot_area_sf": 5000,
+      "min_lot_area_sf": 12000,
       "setbacks": {
-        "front_ft": 15,
-        "side_ft": 5,
-        "rear_ft": 15
+        "front_ft": 20,
+        "side_ft": 10,
+        "rear_ft": 25
       },
       "authority_id": "AUTH-ZONE-RD",
-      "notes": "Restricted Density Multiple Dwelling Zone"
+      "notes": "Restricted Density Multiple Dwelling Zone. RD5/RD6 have larger setbacks per Table 1b."
     },
     "R3": {
       "density_factor_sf": 800,
@@ -110,12 +111,12 @@
       "density_factor_sf": 800,
       "min_lot_area_sf": 5000,
       "setbacks": {
-        "front_ft": 15,
+        "front_ft": 5,
         "side_ft": 5,
         "rear_ft": 15
       },
       "authority_id": "AUTH-ZONE-RAS3",
-      "notes": "Residential/Accessory Services Zone"
+      "notes": "Residential/Accessory Services Zone. Front: 5 ft or average of adjoining buildings per Table 1b. Side: 0 ft ground-floor commercial, 5 ft residential."
     },
     "R4": {
       "density_factor_sf": 400,
@@ -132,12 +133,12 @@
       "density_factor_sf": 400,
       "min_lot_area_sf": 5000,
       "setbacks": {
-        "front_ft": 15,
+        "front_ft": 5,
         "side_ft": 5,
         "rear_ft": 15
       },
       "authority_id": "AUTH-ZONE-RAS4",
-      "notes": "Residential/Accessory Services Zone"
+      "notes": "Residential/Accessory Services Zone. Front: 5 ft or average of adjoining buildings per Table 1b. Side: 0 ft ground-floor commercial, 5 ft residential."
     },
     "R5": {
       "density_factor_sf": 200,

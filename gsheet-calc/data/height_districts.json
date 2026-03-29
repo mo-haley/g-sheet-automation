@@ -1,10 +1,10 @@
 {
   "_metadata": {
-    "description": "Height district FAR multipliers by zone class, height caps, and story limits for LA City",
-    "authority": "LAMC Section 12.21.1 / Table 2 (Height Districts)",
+    "description": "Height district FAR multipliers, height caps, and story limits by zone class for LA City",
+    "authority": "LAMC Section 12.21.1 / Table 2 (Height Districts) per CP-7150 Jan 2026",
     "code_cycle": "LAMC Rev. 7",
-    "last_reviewed": "2026-03-22",
-    "notes": "FAR varies by zone class within the same height district. C/M zones in HD1 = 1.5:1 while R zones in HD1 = 3:1. This is the most common source of error."
+    "last_reviewed": "2026-03-29",
+    "notes": "FAR, height, and story limits vary by zone class within the same HD. height_story_by_zone_class is the authoritative lookup; top-level height_limit_ft/story_limit are deprecated fallbacks. null height_ft = no HD-imposed height limit (zone or building code governs). null stories = no HD-imposed story limit. The dagger (†) note in Table 2: buildings used entirely for residential are only limited as to feet, not stories."
   },
   "zone_class_map": {
     "R2": "r2",
@@ -19,12 +19,15 @@
     "R4": "r4_r5",
     "RAS4": "ras4",
     "R5": "r4_r5",
+    "CR": "c_m",
     "C1": "c_m",
     "C1.5": "c_m",
     "C2": "c_m",
     "C4": "c_m",
     "C5": "c_m",
     "CM": "c_m",
+    "MR1": "c_m",
+    "MR2": "c_m",
     "M1": "c_m",
     "M2": "c_m",
     "M3": "c_m"
@@ -39,10 +42,18 @@
         "ras4": 3.0,
         "c_m": 1.5
       },
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 33, "stories": null, "notes": "R2 in HD1: 33 ft, no story limit"},
+        "rd_r3": {"height_ft": 45, "stories": null, "notes": "RD/R3 in HD1: 45 ft, no story limit"},
+        "ras3":  {"height_ft": 45, "stories": null},
+        "r4_r5": {"height_ft": null, "stories": null, "notes": "R4/R5 in HD1: no height or story limit from HD"},
+        "ras4":  {"height_ft": null, "stories": null},
+        "c_m":   {"height_ft": null, "stories": null, "notes": "C/M in HD1: 75 ft / 6 stories for CR only; otherwise no HD limit. CR-specific logic not auto-applied."}
+      },
       "height_limit_ft": null,
       "story_limit": null,
       "authority_id": "AUTH-HD-1",
-      "notes": "Default HD. R zones = 3:1, C/M zones = 1.5:1. Height governed by zone and building code, not HD."
+      "notes": "Default HD. R zones = 3:1, C/M zones = 1.5:1. Height/stories now zone-class-specific per Table 2."
     },
     "1L": {
       "far_by_zone_class": {
@@ -53,10 +64,18 @@
         "ras4": 3.0,
         "c_m": 1.5
       },
-      "height_limit_ft": 30,
-      "story_limit": 2,
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 33, "stories": 3, "notes": "R2 in 1L: 33 ft, 3 stories†"},
+        "rd_r3": {"height_ft": 45, "stories": 3, "notes": "RD/R3 in 1L: 45 ft, 3 stories†"},
+        "ras3":  {"height_ft": 50, "stories": null, "notes": "RAS3 in 1L: 50 ft, no story limit"},
+        "r4_r5": {"height_ft": 75, "stories": 6, "notes": "R4/R5 in 1L: 75 ft, 6 stories†"},
+        "ras4":  {"height_ft": 75, "stories": 6, "notes": "RAS4 in 1L: 75 ft, 6 stories†"},
+        "c_m":   {"height_ft": 75, "stories": 6, "notes": "C/M in 1L: 75 ft, 6 stories†"}
+      },
+      "height_limit_ft": null,
+      "story_limit": null,
       "authority_id": "AUTH-HD-1L",
-      "notes": "HD 1 with L suffix (low). 30 ft / 2 stories max."
+      "notes": "HD 1L. Height/stories vary by zone class per Table 2. Old global 30/2 was wrong."
     },
     "1VL": {
       "far_by_zone_class": {
@@ -67,10 +86,18 @@
         "ras4": 3.0,
         "c_m": 1.5
       },
-      "height_limit_ft": 36,
-      "story_limit": 3,
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 30, "stories": 2, "notes": "R2 in 1VL: 30 ft, 2 stories†"},
+        "rd_r3": {"height_ft": 30, "stories": 2, "notes": "RD/R3 in 1VL: 30 ft, 2 stories†"},
+        "ras3":  {"height_ft": 30, "stories": null, "notes": "RAS3 in 1VL: 30 ft, no story limit"},
+        "r4_r5": {"height_ft": 45, "stories": 3, "notes": "R4/R5 in 1VL: 45 ft, 3 stories†"},
+        "ras4":  {"height_ft": 50, "stories": 3, "notes": "RAS4 in 1VL: 50 ft, 3 stories†"},
+        "c_m":   {"height_ft": 45, "stories": 3, "notes": "C/M in 1VL: 45 ft, 3 stories†"}
+      },
+      "height_limit_ft": null,
+      "story_limit": null,
       "authority_id": "AUTH-HD-1VL",
-      "notes": "HD 1 with VL suffix. 36 ft / 3 stories max."
+      "notes": "HD 1VL. Height/stories vary significantly by zone class. Old global 36/3 was wrong."
     },
     "1XL": {
       "far_by_zone_class": {
@@ -81,10 +108,18 @@
         "ras4": 3.0,
         "c_m": 1.5
       },
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": null, "stories": null, "notes": "R2 in 1XL: n/a per Table 2"},
+        "rd_r3": {"height_ft": null, "stories": null, "notes": "RD/R3 in 1XL: n/a per Table 2"},
+        "ras3":  {"height_ft": null, "stories": null, "notes": "RAS3 in 1XL: n/a per Table 2"},
+        "r4_r5": {"height_ft": 30, "stories": 2, "notes": "R4/R5 in 1XL: 30 ft, 2 stories†"},
+        "ras4":  {"height_ft": 30, "stories": 2, "notes": "RAS4 in 1XL: 30 ft, 2 stories†"},
+        "c_m":   {"height_ft": 30, "stories": 2, "notes": "C/M in 1XL: 30 ft, 2 stories†"}
+      },
       "height_limit_ft": 30,
       "story_limit": 2,
       "authority_id": "AUTH-HD-1XL",
-      "notes": "TODO: Verify XL suffix limits. Some community plans define XL differently. Authority gap."
+      "notes": "HD 1XL. Table 2 shows n/a for R2/RD/R3/RAS3 in 1XL. R4/R5/RAS4/C/M = 30ft/2 stories."
     },
     "1SS": {
       "far_by_zone_class": {
@@ -95,10 +130,11 @@
         "ras4": 3.0,
         "c_m": 1.5
       },
-      "height_limit_ft": 30,
-      "story_limit": 2,
+      "height_story_by_zone_class": {},
+      "height_limit_ft": null,
+      "story_limit": null,
       "authority_id": "AUTH-HD-1SS",
-      "notes": "TODO: Verify SS (Specific Plan area) suffix. Limits may be governed by specific plan, not HD. Authority gap."
+      "notes": "HD 1SS: Table 2 shows n/a for all zone classes. Limits may be governed by specific plan. Authority gap — do not return height/story without specific plan review."
     },
     "2": {
       "far_by_zone_class": {
@@ -109,10 +145,18 @@
         "ras4": 6.0,
         "c_m": 6.0
       },
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 33, "stories": null, "notes": "R2 in HD2: capped at 33 ft regardless of HD"},
+        "rd_r3": {"height_ft": 75, "stories": 6, "notes": "RD/R3 in HD2: 75 ft, 6 stories†"},
+        "ras3":  {"height_ft": 75, "stories": 6},
+        "r4_r5": {"height_ft": null, "stories": null},
+        "ras4":  {"height_ft": null, "stories": null},
+        "c_m":   {"height_ft": null, "stories": null, "notes": "C/M in HD2: 75 ft / 6 stories for CR only; otherwise no limit"}
+      },
       "height_limit_ft": null,
       "story_limit": null,
       "authority_id": "AUTH-HD-2",
-      "notes": "HD 2. FAR 6:1 all zone classes. No absolute height limit from HD."
+      "notes": "HD 2. FAR 6:1 all zone classes."
     },
     "3": {
       "far_by_zone_class": {
@@ -123,10 +167,18 @@
         "ras4": 10.0,
         "c_m": 10.0
       },
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 33, "stories": null, "notes": "R2 in HD3: capped at 33 ft"},
+        "rd_r3": {"height_ft": 75, "stories": 6, "notes": "RD/R3 in HD3: 75 ft, 6 stories†"},
+        "ras3":  {"height_ft": 75, "stories": 6},
+        "r4_r5": {"height_ft": null, "stories": null},
+        "ras4":  {"height_ft": null, "stories": null},
+        "c_m":   {"height_ft": null, "stories": null, "notes": "C/M in HD3: 75 ft / 6 stories for CR only; otherwise no limit"}
+      },
       "height_limit_ft": null,
       "story_limit": null,
       "authority_id": "AUTH-HD-3",
-      "notes": "HD 3. FAR 10:1 all zone classes. No absolute height limit from HD."
+      "notes": "HD 3. FAR 10:1 all zone classes."
     },
     "4": {
       "far_by_zone_class": {
@@ -137,10 +189,18 @@
         "ras4": 13.0,
         "c_m": 13.0
       },
+      "height_story_by_zone_class": {
+        "r2":    {"height_ft": 33, "stories": null, "notes": "R2 in HD4: capped at 33 ft"},
+        "rd_r3": {"height_ft": 75, "stories": 6, "notes": "RD/R3 in HD4: 75 ft, 6 stories†"},
+        "ras3":  {"height_ft": 75, "stories": 6},
+        "r4_r5": {"height_ft": null, "stories": null},
+        "ras4":  {"height_ft": null, "stories": null},
+        "c_m":   {"height_ft": null, "stories": null, "notes": "C/M in HD4: 75 ft / 6 stories for CR only; otherwise no limit"}
+      },
       "height_limit_ft": null,
       "story_limit": null,
       "authority_id": "AUTH-HD-4",
-      "notes": "HD 4. FAR 13:1 all zone classes. No absolute height limit from HD."
+      "notes": "HD 4. FAR 13:1 all zone classes."
     }
   }
 }

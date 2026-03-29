@@ -6,8 +6,17 @@
     "last_reviewed": "2026-03-20",
     "notes": "Residential parking based on habitable rooms per dwelling unit."
   },
+  "residential_zone_overrides": {
+    "description": "Zone-specific flat-rate parking that overrides the hab-room tier system",
+    "authority_id": "AUTH-PARK-RES",
+    "R2": {
+      "spaces_per_unit": 2.0,
+      "covered_min": 1,
+      "notes": "R2: 2 spaces per DU, one covered (Table 1a). Flat rate, not hab-room-based."
+    }
+  },
   "residential": {
-    "description": "Per dwelling unit by habitable room count",
+    "description": "Per dwelling unit by habitable room count (default for multifamily zones)",
     "authority_id": "AUTH-PARK-RES",
     "tiers": [
       {

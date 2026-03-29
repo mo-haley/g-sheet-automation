@@ -44,8 +44,31 @@ class HeightRule(BaseRule):
             )
             return results, issues
 
-        height_limit = hd_info.get("height_limit_ft")
-        story_limit = hd_info.get("story_limit")
+        # Zone-class-specific lookup (preferred) with fallback to global (deprecated)
+        zone_class_map = hd_data.get("zone_class_map", {})
+        zone_class_key = zone_class_map.get(site.zone or "")
+        hs_by_class = hd_info.get("height_story_by_zone_class", {})
+        hs_entry = hs_by_class.get(zone_class_key or "", {}) if zone_class_key else {}
+
+        if hs_entry:
+            height_limit = hs_entry.get("height_ft")
+            story_limit = hs_entry.get("stories")
+        else:
+            # Fallback to deprecated global values
+            height_limit = hd_info.get("height_limit_ft")
+            story_limit = hd_info.get("story_limit")
+            if zone_class_key:
+                issues.append(
+                    ReviewIssue(
+                        id="CALC-HT-003",
+                        category="height",
+                        severity="medium",
+                        title=f"No zone-specific height/story data for '{zone_class_key}' in HD {site.height_district}",
+                        description="Using deprecated global HD limits. Zone-specific limits may differ.",
+                        affected_fields=["height_limit_ft", "story_limit"],
+                        suggested_review_role="zoning consultant",
+                    )
+                )
 
         review_notes = []
         if site.specific_plan:

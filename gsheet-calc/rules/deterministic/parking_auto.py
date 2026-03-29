@@ -29,8 +29,60 @@ class AutoParkingRule(BaseRule):
         ratios = _load_parking_ratios()
 
         # --- Residential parking ---
+        res_required = self._calc_residential(site, project, ratios, results, issues)
+
+        # --- Commercial parking ---
+        com_required = self._calc_commercial(project, ratios, results, issues)
+
+        # --- Total ---
+        total = res_required + com_required
+        results.append(self._make_result(
+            "total_parking_required",
+            total,
+            unit="spaces",
+            formula=f"{res_required} + {com_required}",
+            inputs_used={"residential": res_required, "commercial": com_required},
+        ))
+
+        return results, issues
+
+    def _calc_residential(
+        self, site: Site, project: Project, ratios: dict,
+        results: list[CalcResult], issues: list[ReviewIssue],
+    ) -> int:
+        """Calculate residential parking, returning required spaces count."""
         res_spaces = 0.0
         steps = []
+
+        # Check zone-specific overrides (e.g. R2: flat 2 spaces/unit)
+        zone_overrides = ratios.get("residential_zone_overrides", {})
+        zone_override = zone_overrides.get(site.zone or "") if site else None
+
+        if zone_override:
+            flat_rate = zone_override["spaces_per_unit"]
+            total_units = sum(ut.count for ut in project.unit_mix) if project.unit_mix else project.total_units
+            res_spaces = float(total_units) * flat_rate
+            steps.append(
+                f"Zone {site.zone} override: {total_units} units x {flat_rate} spaces/unit = {res_spaces:.1f}"
+            )
+            res_required = math.ceil(res_spaces)
+            steps.append(f"Total residential: {res_spaces:.1f} -> ceil = {res_required}")
+
+            results.append(self._make_result(
+                "residential_parking_required",
+                res_required,
+                unit="spaces",
+                formula=f"zone_override: {total_units} * {flat_rate}",
+                inputs_used={"zone": site.zone, "total_units": total_units, "flat_rate": flat_rate},
+                intermediate_steps=steps,
+                review_notes=[
+                    f"Zone {site.zone}: flat rate {flat_rate} spaces/unit (not hab-room-based). {zone_override.get('notes', '')}",
+                    "Incentive parking reductions NOT applied. See advisory screens.",
+                ],
+            ))
+            return res_required
+
+        # Default: hab-room-based tiers
         tiers = ratios.get("residential", {}).get("tiers", [])
 
         if not project.unit_mix:
@@ -68,7 +120,6 @@ class AutoParkingRule(BaseRule):
                     f"({ut.habitable_rooms} hab rooms) = {unit_spaces:.1f}"
                 )
 
-        # Round up fractional
         res_required = math.ceil(res_spaces)
         steps.append(f"Total residential: {res_spaces:.1f} -> ceil = {res_required}")
 
@@ -81,8 +132,13 @@ class AutoParkingRule(BaseRule):
             intermediate_steps=steps,
             review_notes=["Incentive parking reductions NOT applied. See advisory screens."],
         ))
+        return res_required
 
-        # --- Commercial parking ---
+    def _calc_commercial(
+        self, project: Project, ratios: dict,
+        results: list[CalcResult], issues: list[ReviewIssue],
+    ) -> int:
+        """Calculate commercial parking, returning required spaces count."""
         com_spaces = 0.0
         com_steps = []
         com_uses = ratios.get("commercial", {}).get("uses", {})
@@ -125,18 +181,7 @@ class AutoParkingRule(BaseRule):
             inputs_used={"occupancy_areas": [o.model_dump() for o in project.occupancy_areas]},
             intermediate_steps=com_steps,
         ))
-
-        # --- Total ---
-        total = res_required + com_required
-        results.append(self._make_result(
-            "total_parking_required",
-            total,
-            unit="spaces",
-            formula=f"{res_required} + {com_required}",
-            inputs_used={"residential": res_required, "commercial": com_required},
-        ))
-
-        return results, issues
+        return com_required
 
 
 def _map_occupancy_to_use(occ) -> str:

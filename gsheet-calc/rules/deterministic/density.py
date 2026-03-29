@@ -46,6 +46,29 @@ class DensityRule(BaseRule):
             return results, issues
 
         density_factor = zone_info.get("density_factor_sf")
+        max_units = zone_info.get("max_units_per_lot")
+
+        # Handle zones with fixed max units per lot (e.g. R2: max 2 DU)
+        if density_factor is None and max_units is not None:
+            results.append(self._make_result(
+                "base_density",
+                max_units,
+                unit="dwelling units",
+                formula=f"max_units_per_lot = {max_units}",
+                inputs_used={
+                    "max_units_per_lot": max_units,
+                    "zone": site.zone,
+                },
+                intermediate_steps=[
+                    f"Zone {site.zone}: fixed maximum {max_units} DU per lot (not area-based)",
+                ],
+                review_notes=[
+                    "Bonus density (TOC, State DB) NOT included. See advisory screens.",
+                    f"Zone {site.zone} uses a fixed cap, not a density factor formula.",
+                ],
+            ))
+            return results, issues
+
         if density_factor is None:
             issues.append(
                 ReviewIssue(
@@ -53,7 +76,7 @@ class DensityRule(BaseRule):
                     category="density",
                     severity="high",
                     title=f"No density factor for zone '{site.zone}'",
-                    description="Zone exists in table but density_factor_sf is null. Likely an authority gap.",
+                    description="Zone exists in table but density_factor_sf is null and no max_units_per_lot. Likely an authority gap.",
                     affected_fields=["base_density"],
                     suggested_review_role="zoning consultant",
                     blocking=True,
@@ -79,6 +102,10 @@ class DensityRule(BaseRule):
             return results, issues
 
         base_density = math.floor(effective_area / density_factor)
+
+        # Apply max_units_per_lot cap if present (safety net)
+        if max_units is not None and base_density > max_units:
+            base_density = max_units
 
         results.append(self._make_result(
             "base_density",

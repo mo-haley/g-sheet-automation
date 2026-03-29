@@ -72,14 +72,14 @@ def _side_r3() -> YardFormula:
         lot_width_increment_ft=1.0,
         lot_width_step_ft=50.0,
         lot_width_threshold_ft=50.0,
-        story_increment_ft=1.0,     # PROVISIONAL — verify subsection in LAMC 12.10
+        story_increment_ft=1.0,     # +1 ft per story above 2nd per Table 1b
         story_threshold=2,          # increments start at 3rd story (above 2nd)
+        story_increment_max_ft=16.0,  # "not to exceed 16 ft" per Table 1b
         parametric=True,
         governing_section="LAMC 12.10",
         notes=(
-            "5 ft base minimum. +1 ft per 50 ft of lot width over 50 ft. "
-            "Story increment (+1 ft per story above 2nd) PROVISIONAL: "
-            "verify the authorizing subsection in LAMC 12.10 before applying."
+            "5 ft base minimum. +1 ft per story above 2nd, not to exceed 16 ft "
+            "(Table 1b). +1 ft per 50 ft of lot width over 50 ft."
         ),
     )
 
@@ -91,35 +91,35 @@ def _side_r4() -> YardFormula:
         lot_width_increment_ft=1.0,
         lot_width_step_ft=50.0,
         lot_width_threshold_ft=50.0,
-        story_increment_ft=1.0,     # PROVISIONAL — verify subsection in LAMC 12.11
+        story_increment_ft=1.0,     # +1 ft per story above 2nd per Table 1b
         story_threshold=2,
+        story_increment_max_ft=16.0,  # "not to exceed 16 ft" per Table 1b
         parametric=True,
         governing_section="LAMC 12.11",
         notes=(
-            "5 ft base minimum. +1 ft per 50 ft of lot width over 50 ft. "
-            "Story increment (+1 ft per story above 2nd) PROVISIONAL: "
-            "verify the authorizing subsection in LAMC 12.11 before applying."
+            "5 ft base minimum. +1 ft per story above 2nd, not to exceed 16 ft "
+            "(Table 1b). +1 ft per 50 ft of lot width over 50 ft."
         ),
     )
 
 
 def _side_r5() -> YardFormula:
-    """R5 side formula — fully provisional; R3/R4 shape applied conservatively."""
+    """R5 side formula — matches R3/R4 shape per Table 1b (same side rules)."""
     return YardFormula(
         yard_type="side",
         base_ft=5.0,
         lot_width_increment_ft=1.0,
         lot_width_step_ft=50.0,
         lot_width_threshold_ft=50.0,
-        story_increment_ft=1.0,     # PROVISIONAL
+        story_increment_ft=1.0,     # +1 ft per story above 2nd per Table 1b
         story_threshold=2,
+        story_increment_max_ft=16.0,  # "not to exceed 16 ft" per Table 1b
         parametric=True,
         governing_section="LAMC 12.12",
         notes=(
-            "PROVISIONAL — R5 yard formula not explicitly defined in sprint spec. "
-            "R3/R4 formula shape applied conservatively. "
-            "Verify all values against LAMC 12.12 before use. "
-            "Do not treat as governing without section confirmation."
+            "5 ft base minimum. +1 ft per story above 2nd, not to exceed 16 ft "
+            "(Table 1b). +1 ft per 50 ft of lot width over 50 ft. "
+            "Verify against LAMC 12.12 before use in permit calculations."
         ),
     )
 
@@ -138,25 +138,46 @@ def _side_rd(rd_zone: str) -> YardFormula:
     )
 
 
-def _rear(governing_section: str, *, provisional: bool = False) -> YardFormula:
+def _rear(
+    governing_section: str,
+    *,
+    provisional: bool = False,
+    story_increment_ft: float | None = None,
+    story_threshold: int | None = None,
+    story_increment_max_ft: float | None = None,
+) -> YardFormula:
     """Standard residential rear yard formula.
 
     alley_reduction_ft is intentionally None — the reduction amount and
     governing provision must be confirmed before applying.
+
+    R4/R5 zones add +1 ft per story above 3rd, capped at 20 ft (Table 1b).
+    R3/RD zones do not have a rear story increment.
     """
     provisional_note = (
         " Formula shape not confirmed for this zone — use conservatively."
         if provisional else ""
     )
+    story_note = ""
+    if story_increment_ft is not None and story_threshold is not None:
+        cap_note = f", max {story_increment_max_ft:.0f} ft" if story_increment_max_ft else ""
+        story_note = (
+            f" +{story_increment_ft:.0f} ft per story above {story_threshold}{cap_note}"
+            " (Table 1b)."
+        )
     return YardFormula(
         yard_type="rear",
         base_ft=15.0,
+        story_increment_ft=story_increment_ft,
+        story_threshold=story_threshold,
+        story_increment_max_ft=story_increment_max_ft,
         alley_reduction_ft=None,    # PROVISIONAL — amount not confirmed; see module docstring
         parametric=True,
         governing_section=governing_section,
         notes=(
-            "15 ft base rear yard (standard residential). "
-            "Alley reduction applicable when rear lot line abuts a public alley, "
+            "15 ft base rear yard (standard residential)."
+            + story_note
+            + " Alley reduction applicable when rear lot line abuts a public alley, "
             "but reduction amount is NOT hardcoded — verify governing provision "
             "(LAMC 12.21-G or equivalent zone-section reference) before applying."
             + provisional_note
@@ -187,10 +208,33 @@ def _front(governing_section: str) -> YardFormula:
 # ─────────────────────────────────────────────────────────────────────────────
 # Maps yard family name → (side_builder_fn, rear_section, front_section, provisional_rear)
 
-_FAMILY_MAP: dict[str, tuple] = {
-    "R3": (_side_r3, "LAMC 12.10", "LAMC 12.10", False),
-    "R4": (_side_r4, "LAMC 12.11", "LAMC 12.11", False),
-    "R5": (_side_r5, "LAMC 12.12", "LAMC 12.12", True),
+_FAMILY_MAP: dict[str, dict] = {
+    "R3": {
+        "side_fn": _side_r3,
+        "rear_section": "LAMC 12.10",
+        "front_section": "LAMC 12.10",
+        "provisional_rear": False,
+    },
+    "R4": {
+        "side_fn": _side_r4,
+        "rear_section": "LAMC 12.11",
+        "front_section": "LAMC 12.11",
+        "provisional_rear": False,
+        # R4 rear: +1 ft per story above 3rd, max 20 ft (Table 1b)
+        "rear_story_increment_ft": 1.0,
+        "rear_story_threshold": 3,
+        "rear_story_increment_max_ft": 20.0,
+    },
+    "R5": {
+        "side_fn": _side_r5,
+        "rear_section": "LAMC 12.12",
+        "front_section": "LAMC 12.12",
+        "provisional_rear": False,
+        # R5 rear: +1 ft per story above 3rd, max 20 ft (Table 1b)
+        "rear_story_increment_ft": 1.0,
+        "rear_story_threshold": 3,
+        "rear_story_increment_max_ft": 20.0,
+    },
 }
 
 
@@ -201,8 +245,18 @@ def _formulas_for_family(
     spec = _FAMILY_MAP.get(family)
     if spec is None:
         return None
-    side_fn, rear_section, front_section, provisional_rear = spec
-    return side_fn(), _rear(rear_section, provisional=provisional_rear), _front(front_section)
+    side_fn = spec["side_fn"]
+    rear_section = spec["rear_section"]
+    front_section = spec["front_section"]
+    provisional_rear = spec.get("provisional_rear", False)
+    rear = _rear(
+        rear_section,
+        provisional=provisional_rear,
+        story_increment_ft=spec.get("rear_story_increment_ft"),
+        story_threshold=spec.get("rear_story_threshold"),
+        story_increment_max_ft=spec.get("rear_story_increment_max_ft"),
+    )
+    return side_fn(), rear, _front(front_section)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

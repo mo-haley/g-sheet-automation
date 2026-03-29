@@ -187,15 +187,20 @@ def _evaluate_side_formula(
         elif number_of_stories > s_thresh:
             extra = number_of_stories - s_thresh
             addition = extra * s_inc
+            # Apply cap if story_increment_max_ft is set (e.g. "not to exceed 16 ft")
+            cap = formula.story_increment_max_ft
+            if cap is not None and value + addition > cap:
+                addition = max(0.0, cap - value)
             value += addition
             is_provisional = True   # story increment is always provisional when fired
+            cap_note = f" (capped at {cap:.0f} ft)" if cap is not None else ""
             steps.append(AdjustmentStep(
-                adjustment=f"+{addition:.1f} ft story increment (PROVISIONAL)",
+                adjustment=f"+{addition:.1f} ft story increment{cap_note}",
                 reason=(
                     f"{number_of_stories} stories exceeds {s_thresh}-story threshold "
-                    f"by {extra} → {extra} × {s_inc:.0f} ft = +{addition:.1f} ft. "
-                    f"PROVISIONAL: authorizing subsection in {formula.governing_section} "
-                    "not independently verified — confirm before permit use."
+                    f"by {extra} → {extra} × {s_inc:.0f} ft = +{extra * s_inc:.1f} ft"
+                    f"{f', capped to {cap:.0f} ft total' if cap is not None and value >= cap else ''}. "
+                    f"Per {formula.governing_section} / Table 1b."
                 ),
                 section=formula.governing_section,
                 value_ft=value,
@@ -208,8 +213,11 @@ def _evaluate_side_formula(
 def _evaluate_rear_formula(
     formula: YardFormula,
     is_alley_edge: bool,
+    number_of_stories: int | None = None,
 ) -> tuple[float | None, list[AdjustmentStep], bool]:
     """Evaluate a rear yard formula.
+
+    R4/R5 zones add +1 ft per story above 3rd, capped at 20 ft (Table 1b).
 
     When the rear lot line abuts an alley (is_alley_edge=True) and
     alley_reduction_ft is None (amount not confirmed), the full base_ft
@@ -227,6 +235,41 @@ def _evaluate_rear_formula(
         value_ft=value,
     )]
     is_provisional = False
+
+    # ── Story increment (R4/R5 rear: +1 ft per story above 3rd, max 20 ft) ──
+    s_inc = formula.story_increment_ft
+    s_thresh = formula.story_threshold
+
+    if s_inc is not None and s_thresh is not None:
+        if number_of_stories is None:
+            is_provisional = True
+            steps.append(AdjustmentStep(
+                adjustment="rear story increment: not evaluated",
+                reason=(
+                    f"number_of_stories not provided — cannot determine whether "
+                    f"rear yard story increment applies. "
+                    f"Formula: +{s_inc:.0f} ft per story above {s_thresh}."
+                ),
+                section=formula.governing_section,
+                value_ft=None,
+            ))
+        elif number_of_stories > s_thresh:
+            extra = number_of_stories - s_thresh
+            addition = extra * s_inc
+            cap = formula.story_increment_max_ft
+            if cap is not None and value + addition > cap:
+                addition = max(0.0, cap - value)
+            value += addition
+            cap_note = f" (capped at {cap:.0f} ft)" if cap is not None else ""
+            steps.append(AdjustmentStep(
+                adjustment=f"+{addition:.1f} ft rear story increment{cap_note}",
+                reason=(
+                    f"{number_of_stories} stories exceeds {s_thresh}-story threshold "
+                    f"by {extra}. Per {formula.governing_section} / Table 1b."
+                ),
+                section=formula.governing_section,
+                value_ft=value,
+            ))
 
     if is_alley_edge:
         if formula.alley_reduction_ft is not None:
@@ -510,7 +553,7 @@ def _calc_side_rear_edge(
     # ── Baseline evaluation ──────────────────────────────────────────────────
     if classification == "rear":
         baseline_ft, chain_steps, is_provisional = _evaluate_rear_formula(
-            formula, is_alley_edge
+            formula, is_alley_edge, project_inputs.number_of_stories
         )
     else:
         baseline_ft, chain_steps, is_provisional = _evaluate_side_formula(
