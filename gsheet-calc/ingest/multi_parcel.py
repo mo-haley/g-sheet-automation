@@ -57,11 +57,34 @@ def resolve_multi_parcel_site(
     issues: list[ReviewIssue] = []
     per_parcel: list[dict] = []  # {apn, site, features, identify_data, issues}
 
+    # Deduplicate APNs — repeated identical APNs are not separate parcels
+    seen_apns: set[str] = set()
+    unique_apns: list[str] = []
     for apn in apn_list:
-        apn_clean = apn.strip()
-        if not apn_clean:
+        normalized = apn.strip()
+        if not normalized:
             continue
+        if normalized in seen_apns:
+            continue
+        seen_apns.add(normalized)
+        unique_apns.append(normalized)
 
+    if len(unique_apns) < len([a for a in apn_list if a.strip()]):
+        dup_count = len([a for a in apn_list if a.strip()]) - len(unique_apns)
+        issues.append(ReviewIssue(
+            id="MULTI-APN-DUP",
+            category="ingest",
+            severity="medium",
+            title=f"{dup_count} duplicate APN(s) removed from input",
+            description=(
+                f"Input contained repeated APNs. Duplicates were removed before "
+                f"querying. {len(unique_apns)} unique APN(s) will be resolved."
+            ),
+            affected_fields=["apn", "lot_area_sf"],
+            suggested_review_role="planner",
+        ))
+
+    for apn_clean in unique_apns:
         # Step 1: Query parcel features by BPP
         features = zimas.query_parcel_by_bpp(apn_clean)
         if not features:

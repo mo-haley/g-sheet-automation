@@ -278,7 +278,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
             "code": r.code_section or "",
         })
     if area_items:
-        sections.append({"title": "Lot Area Chain", "items": area_items})
+        sections.append({"title": "Lot Area Chain", "entries": area_items})
 
     # Density
     density_items = []
@@ -293,7 +293,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
             "code": r.code_section or "",
         })
     if density_items:
-        sections.append({"title": "Density", "items": density_items})
+        sections.append({"title": "Density", "entries": density_items})
 
     # FAR
     far_items = []
@@ -320,7 +320,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
                 "code": r.code_section or "",
             })
     if far_items:
-        sections.append({"title": "Floor Area Ratio", "items": far_items})
+        sections.append({"title": "Floor Area Ratio", "entries": far_items})
 
     # Height
     height_items = []
@@ -335,7 +335,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
             "code": r.code_section or "",
         })
     if height_items:
-        sections.append({"title": "Height", "items": height_items})
+        sections.append({"title": "Height", "entries": height_items})
 
     # Parking
     parking_items = []
@@ -351,7 +351,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
                 "code": r.code_section or "",
             })
     if parking_items:
-        sections.append({"title": "Parking", "items": parking_items})
+        sections.append({"title": "Parking", "entries": parking_items})
 
     # Open Space
     os_items = []
@@ -367,7 +367,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
                 "code": r.code_section or "",
             })
     if os_items:
-        sections.append({"title": "Open Space", "items": os_items})
+        sections.append({"title": "Open Space", "entries": os_items})
 
     # Loading
     load_items = []
@@ -382,7 +382,7 @@ def _build_calc_ledger(area_results, density_results, far_results, parking_resul
             "code": r.code_section or "",
         })
     if load_items:
-        sections.append({"title": "Loading", "items": load_items})
+        sections.append({"title": "Loading", "entries": load_items})
 
     return sections
 
