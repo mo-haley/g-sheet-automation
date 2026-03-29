@@ -213,12 +213,19 @@ def parse_zimas_response(
         )
 
     # --- TOC ---
+    # Note: ZIMAS MapServer layer 1400 is a Group Layer that often returns no
+    # identify results.  TOC tier is more reliably available from the ZIMAS
+    # parcel profile (website AJAX endpoint).  When the MapServer returns
+    # nothing, toc_tier_source stays "unavailable" — which is distinct from
+    # "affirmatively not in TOC area".
     toc_results = _find_layer_results(identify_data, ZIMAS_LAYERS["toc"])
     toc_tier_raw = _get_attr(toc_results, "TOC_TIER", "TIER")
     toc_tier = None
+    toc_tier_source = "unavailable"
     if toc_tier_raw:
         try:
             toc_tier = int(toc_tier_raw)
+            toc_tier_source = "api"
             sources.append(
                 DataSource(field="toc_tier", source="ZIMAS TOC layer", confidence="auto_review")
             )
@@ -284,6 +291,7 @@ def parse_zimas_response(
         d_limitations=d_lims,
         coastal_zone=coastal_zone if coastal_results else None,
         toc_tier=toc_tier,
+        toc_tier_source=toc_tier_source,
         ab2097_area=ab2097_area if ab2097_results else None,
         lot_area_sf=parcel_attrs.get("lot_area_sf"),
         parcel_geometry=parcel_attrs.get("parcel_geometry"),

@@ -488,7 +488,7 @@ def run_analysis():
 
     # Advisory screens
     all_det_results = area_results + density_results + far_results + height_results
-    scenarios = [
+    all_scenarios = [
         build_base_zoning_scenario(all_det_results, issue_register.get_all()),
         screen_toc(site, project),
         screen_density_bonus(site, project),
@@ -497,7 +497,7 @@ def run_analysis():
         screen_ab2011(site, project),
         screen_adaptive_reuse(site, project),
     ]
-    for sc in scenarios:
+    for sc in all_scenarios:
         issue_register.add_all(sc.issues)
 
     all_issues = issue_register.get_all()
@@ -510,6 +510,35 @@ def run_analysis():
         "density_bonus": "State Density Bonus",
         "affordable_100": "100% Affordable Housing",
     }
+
+    # Map policy_path to scenario names for ordering
+    _PATH_TO_SCENARIO = {
+        "base_zoning": "Base Zoning",
+        "toc": "TOC Incentive Program",
+        "density_bonus": "State Density Bonus",
+        "affordable_100": "100% Affordable Housing",
+    }
+    selected_scenario_name = _PATH_TO_SCENARIO.get(policy_path, "Base Zoning")
+
+    # Reorder: selected path first, base zoning second (if not selected), then rest
+    primary_scenarios = []
+    secondary_scenarios = []
+    for sc in all_scenarios:
+        if sc.name == selected_scenario_name:
+            primary_scenarios.insert(0, sc)
+        elif sc.name == "Base Zoning" and policy_path != "base_zoning":
+            primary_scenarios.append(sc)
+        else:
+            secondary_scenarios.append(sc)
+    scenarios = primary_scenarios + secondary_scenarios
+
+    # Detect if the selected path cannot be evaluated
+    selected_scenario = next((s for s in scenarios if s.name == selected_scenario_name), None)
+    selected_path_blocked = (
+        selected_scenario is not None
+        and selected_scenario.status == "unresolved"
+        and selected_scenario.missing_inputs
+    )
 
     # Key results
     density_r = _get_result(density_results, "base_density")
@@ -579,11 +608,30 @@ def run_analysis():
     if site.d_limitations:
         overlays.extend([f"D: {d}" for d in site.d_limitations])
 
+    # Required-inputs assessment for the selected path
+    required_inputs_notes = []
+    if policy_path == "base_zoning":
+        if not site.zone:
+            required_inputs_notes.append("Base zone is required but was not resolved from ZIMAS.")
+        if not site.lot_area_sf:
+            required_inputs_notes.append("Lot area is required but was not resolved. Enter a manual override.")
+    elif policy_path in ("toc", "density_bonus", "affordable_100"):
+        if project.affordability is None:
+            required_inputs_notes.append("Affordability mix (% ELI/VLI/LI/Moderate) is required for this pathway.")
+        if policy_path == "toc" and site.toc_tier is None:
+            required_inputs_notes.append("TOC tier is unavailable from ZIMAS API. Confirm on ZIMAS website before relying on TOC screening.")
+        if project.total_units == 0:
+            required_inputs_notes.append("Unit count is required to calculate density bonus yield.")
+
     context = {
         "site": site,
         "project": project,
         "address": address,
+        "policy_path": policy_path,
         "policy_path_label": policy_labels.get(policy_path, policy_path),
+        "selected_scenario_name": selected_scenario_name,
+        "selected_path_blocked": selected_path_blocked,
+        "required_inputs_notes": required_inputs_notes,
         "tool_version": TOOL_VERSION,
         "code_cycle": CODE_CYCLE,
         "overlays": overlays,

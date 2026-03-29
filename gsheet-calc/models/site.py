@@ -41,6 +41,7 @@ class Site(BaseModel):
 
     # Transit / screening
     toc_tier: int | None = None
+    toc_tier_source: str = "unavailable"  # unavailable / api / profile / user
     ab2097_area: bool | None = None
     nearest_transit_stop_distance_ft: float | None = None
     transit_stop_type: str | None = None

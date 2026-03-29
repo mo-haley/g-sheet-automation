@@ -27,10 +27,17 @@ def screen_toc(site: Site, project: Project) -> ScenarioResult:
 
     if site.toc_tier is None:
         missing.append("toc_tier")
+        if getattr(site, "toc_tier_source", "unavailable") == "unavailable":
+            summary = (
+                "TOC tier could not be determined from ZIMAS API. "
+                "Check the ZIMAS website parcel profile to confirm TOC eligibility."
+            )
+        else:
+            summary = "Site is not in a TOC-eligible area."
         return ScenarioResult(
             name="TOC Incentive Program",
             status="unresolved",
-            summary="TOC tier not available from ZIMAS. Cannot screen eligibility.",
+            summary=summary,
             missing_inputs=missing,
         )
 

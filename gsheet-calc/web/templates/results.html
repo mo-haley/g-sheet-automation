@@ -140,6 +140,28 @@
       <button onclick="window.print()" class="btn btn-outline">Print / PDF</button>
     </div>
 
+    <!-- Required Inputs / Path Status -->
+    {% if selected_path_blocked or required_inputs_notes %}
+    <div class="card" style="border-left: 4px solid #c62828; background: #fff5f5;">
+      {% if selected_path_blocked %}
+      <h2 style="color: #c62828; border-bottom-color: #c62828;"><span class="section-num" style="background: #c62828;">!</span>{{ policy_path_label }}: Cannot Be Evaluated</h2>
+      <p style="font-size: 0.85rem; color: #555; margin-bottom: 8px;">
+        The selected pathway requires inputs that were not provided. Results below reflect <strong>base zoning only</strong>. Do not interpret them as {{ policy_path_label }} entitlements.
+      </p>
+      {% endif %}
+      {% if required_inputs_notes %}
+      <div style="margin-top: 8px;">
+        <div style="font-size: 0.75rem; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 4px;">Missing Required Inputs</div>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          {% for note in required_inputs_notes %}
+          <li style="padding: 4px 0; font-size: 0.82rem; color: #c62828;">{{ note }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- 1. Project Snapshot -->
     <div class="card">
       <h2><span class="section-num">1</span>Project Snapshot</h2>
@@ -163,7 +185,7 @@
         <dd>{{ policy_path_label }}</dd>
 
         <dt>TOC Tier</dt>
-        <dd>{% if site.toc_tier %}Tier {{ site.toc_tier }}{% else %}Not in TOC area{% endif %}</dd>
+        <dd>{% if site.toc_tier %}Tier {{ site.toc_tier }}{% elif site.toc_tier_source == 'unavailable' %}<span style="color:#e65100">Unavailable from API — check ZIMAS website</span>{% else %}Not in TOC area{% endif %}</dd>
 
         <dt>Community Plan</dt>
         <dd>{{ site.community_plan_area or 'Unknown' }}</dd>
@@ -289,12 +311,18 @@
     <div class="card">
       <h2><span class="section-num">5</span>Advisory Pathway Screening</h2>
       {% for sc in scenarios %}
-      <div class="scenario-row">
+      {% set is_selected = (sc.name == selected_scenario_name) %}
+      {% set is_base = (sc.name == 'Base Zoning') %}
+      {% set is_primary = is_selected or (is_base and policy_path != 'base_zoning') %}
+      <div class="scenario-row" style="{% if not is_primary %}opacity: 0.6;{% endif %}{% if is_selected %} background: #f0f4fa; margin: -8px -12px; padding: 8px 12px; border-radius: 6px;{% endif %}">
         <div>
-          <div class="scenario-name">{{ sc.name }}</div>
+          <div class="scenario-name">
+            {% if is_selected %}<span style="color: #2F5496; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">SELECTED PATH &mdash; </span>{% endif %}
+            {{ sc.name }}
+          </div>
           <div class="scenario-summary">{{ sc.summary }}</div>
           {% if sc.missing_inputs %}
-          <div style="font-size: 0.72rem; color: #999; margin-top: 2px;">Missing: {{ sc.missing_inputs | join(', ') }}</div>
+          <div style="font-size: 0.72rem; color: #c62828; margin-top: 2px;">Missing: {{ sc.missing_inputs | join(', ') }}</div>
           {% endif %}
         </div>
         <span class="scenario-status status-{{ sc.status }}">{{ sc.status | replace('_', ' ') | title }}</span>
