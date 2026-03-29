@@ -27,6 +27,7 @@ from ingest.geocoder import Geocoder
 from ingest.multi_parcel import resolve_multi_parcel_site
 from ingest.parser import parse_zimas_response
 from ingest.zimas import ZIMASClient
+from models.issue import ReviewIssue
 from models.project import AffordabilityPlan, OccupancyArea, Project, UnitType
 from output.excel import generate_workbook
 from web.snapshot_view import build_snapshot_view
@@ -422,6 +423,38 @@ def run_analysis():
             address, identify_data, coordinates=coords, pull_timestamp=zimas.pull_timestamp
         )
         issue_register.add_all(ingest_issues)
+
+        # Surface identify-level warnings
+        if not zimas.identify_status.critical_layers_resolved:
+            issue_register.add_all([ReviewIssue(
+                id="INGEST-IDENTIFY-001",
+                category="ingest",
+                severity="critical",
+                title="ZIMAS parcel/zoning layers unresolved after retry",
+                description=(
+                    "ZIMAS identify did not return parcel or zoning data even at wide "
+                    "search tolerance (~100 ft). Downstream calculations that depend on "
+                    "zone, lot area, or parcel geometry will be missing or unreliable. "
+                    "Verify the address is within LA City ZIMAS coverage."
+                ),
+                affected_fields=["zone", "lot_area_sf", "apn", "parcel_geometry"],
+                suggested_review_role="planner",
+                blocking=True,
+            )])
+        elif zimas.identify_status.used_wide_tolerance:
+            issue_register.add_all([ReviewIssue(
+                id="INGEST-IDENTIFY-002",
+                category="ingest",
+                severity="medium",
+                title="ZIMAS data resolved via wide search tolerance",
+                description=(
+                    "Standard tolerance (~50 ft) missed parcel/zoning layers. Data was "
+                    "resolved at wider tolerance (~100 ft). This commonly occurs for "
+                    "addresses on major arterials. The matched parcel should be verified."
+                ),
+                affected_fields=["zone", "lot_area_sf", "apn"],
+                suggested_review_role="planner",
+            )])
     except Exception as e:
         return render_template("index.html", error=f"ZIMAS query failed: {e}")
 
@@ -622,6 +655,38 @@ def run_address_only():
             site, zoning_parse, ingest_issues = parse_zimas_response(
                 address, identify_data, coordinates=coords, pull_timestamp=zimas.pull_timestamp
             )
+
+            # Surface identify-level warnings
+            if not zimas.identify_status.critical_layers_resolved:
+                ingest_issues.append(ReviewIssue(
+                    id="INGEST-IDENTIFY-001",
+                    category="ingest",
+                    severity="critical",
+                    title="ZIMAS parcel/zoning layers unresolved after retry",
+                    description=(
+                        "ZIMAS identify did not return parcel or zoning data even at wide "
+                        "search tolerance (~100 ft). Downstream calculations that depend on "
+                        "zone, lot area, or parcel geometry will be missing or unreliable. "
+                        "Verify the address is within LA City ZIMAS coverage."
+                    ),
+                    affected_fields=["zone", "lot_area_sf", "apn", "parcel_geometry"],
+                    suggested_review_role="planner",
+                    blocking=True,
+                ))
+            elif zimas.identify_status.used_wide_tolerance:
+                ingest_issues.append(ReviewIssue(
+                    id="INGEST-IDENTIFY-002",
+                    category="ingest",
+                    severity="medium",
+                    title="ZIMAS data resolved via wide search tolerance",
+                    description=(
+                        "Standard tolerance (~50 ft) missed parcel/zoning layers. Data was "
+                        "resolved at wider tolerance (~100 ft). This commonly occurs for "
+                        "addresses on major arterials. The matched parcel should be verified."
+                    ),
+                    affected_fields=["zone", "lot_area_sf", "apn"],
+                    suggested_review_role="planner",
+                ))
         except Exception as e:
             return render_template("index.html", error=f"ZIMAS query failed: {e}")
 
