@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from models.project import Project
 from models.result_common import (
     ActionPosture,
     AppResult,
@@ -140,10 +141,22 @@ class SourceEntry(BaseModel):
     limitation: str = ""
 
 
+class ProjectSummary(BaseModel):
+    """Project inputs for full-analysis mode (not present in address-only)."""
+    project_name: str = ""
+    total_units: int = 0
+    unit_mix_display: str = ""
+    commercial_display: str = ""
+    affordability_display: str = ""
+    policy_path_label: str = ""
+    parking_strategy: str = ""
+
+
 class SnapshotViewModel(BaseModel):
-    """Complete view model for the address-only feasibility snapshot."""
+    """Complete view model for feasibility snapshot (address-only or full analysis)."""
 
     site_summary: SiteSummary
+    project_summary: ProjectSummary | None = None
     signals: list[Signal] = Field(default_factory=list)
     observed_fields: list[ObservedField] = Field(default_factory=list)
     module_coverage: list[ModuleCoverage] = Field(default_factory=list)
@@ -973,15 +986,66 @@ def _build_sources(site: Site, app: AppResult) -> list[SourceEntry]:
 # Public API
 # ---------------------------------------------------------------------------
 
-def build_snapshot_view(site: Site, app: AppResult) -> SnapshotViewModel:
-    """Build the complete address-only snapshot view model."""
+def _build_project_summary(
+    project: Project, policy_path_label: str = "",
+) -> ProjectSummary:
+    """Build a ProjectSummary view component from a Project model."""
+    unit_parts = []
+    for u in project.unit_mix:
+        unit_parts.append(f"{u.count} {u.label}")
+    unit_mix_display = ", ".join(unit_parts) if unit_parts else "None entered"
+
+    com_parts = []
+    for o in project.occupancy_areas:
+        com_parts.append(f"{o.use_description} — {o.area_sf:,.0f} sf")
+    commercial_display = "; ".join(com_parts) if com_parts else "None"
+
+    aff_display = "None"
+    if project.affordability:
+        a = project.affordability
+        pcts = []
+        if a.eli_pct: pcts.append(f"ELI {a.eli_pct}%")
+        if a.vli_pct: pcts.append(f"VLI {a.vli_pct}%")
+        if a.li_pct: pcts.append(f"LI {a.li_pct}%")
+        if a.moderate_pct: pcts.append(f"Moderate {a.moderate_pct}%")
+        aff_display = ", ".join(pcts) if pcts else "None"
+
+    return ProjectSummary(
+        project_name=project.project_name or "",
+        total_units=project.total_units,
+        unit_mix_display=unit_mix_display,
+        commercial_display=commercial_display,
+        affordability_display=aff_display,
+        policy_path_label=policy_path_label,
+    )
+
+
+def build_snapshot_view(
+    site: Site,
+    app: AppResult,
+    project: Project | None = None,
+    policy_path_label: str = "",
+) -> SnapshotViewModel:
+    """Build the feasibility snapshot view model.
+
+    When project is provided, the result is a full-analysis snapshot that
+    includes project inputs (unit mix, affordability, policy path). When
+    project is None, the result is the address-only screening snapshot.
+    """
     coverage = _derive_coverage_label(app)
     authority_flags = _collect_authority_flags(app)
     summary_sentence = _build_summary_sentence(site, app, coverage)
 
-    run_type = "Address-only screening"
-    if site.site_basis == "multi_parcel_user":
+    if project is not None:
+        run_type = "Full feasibility analysis"
+    elif site.site_basis == "multi_parcel_user":
         run_type = "Multi-parcel screening (user-specified APNs)"
+    else:
+        run_type = "Address-only screening"
+
+    project_summary = None
+    if project is not None:
+        project_summary = _build_project_summary(project, policy_path_label)
 
     return SnapshotViewModel(
         site_summary=SiteSummary(
@@ -991,6 +1055,7 @@ def build_snapshot_view(site: Site, app: AppResult) -> SnapshotViewModel:
             summary_sentence=summary_sentence,
             authority_flags=authority_flags,
         ),
+        project_summary=project_summary,
         signals=_build_signals(site, app),
         observed_fields=_build_observed_fields(site),
         module_coverage=_build_module_coverage(app),

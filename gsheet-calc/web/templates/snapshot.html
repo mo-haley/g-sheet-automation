@@ -166,7 +166,7 @@
     <!-- Header -->
     <div class="header">
       <div>
-        <h1>Address-Only Feasibility Snapshot</h1>
+        <h1>{% if vm.project_summary %}Feasibility Analysis{% else %}Address-Only Feasibility Snapshot{% endif %}</h1>
         <div style="font-size: 0.85rem; color: #555; margin-top: 2px;">{{ vm.site_summary.address }}</div>
       </div>
       <div class="meta">
@@ -180,6 +180,27 @@
       <a href="/" class="btn btn-outline">New Analysis</a>
       <button onclick="window.print()" class="btn btn-outline">Print / PDF</button>
     </div>
+
+    {% if vm.project_summary %}
+    <!-- Project Inputs -->
+    <div class="card">
+      <h2><span class="section-num">P</span>Project Inputs</h2>
+      <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; font-size: 0.85rem;">
+        {% if vm.project_summary.policy_path_label %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Policy Path</dt>
+        <dd style="color: #222;">{{ vm.project_summary.policy_path_label }}</dd>
+        {% endif %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Total Units</dt>
+        <dd style="color: #222;">{{ vm.project_summary.total_units }}</dd>
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Unit Mix</dt>
+        <dd style="color: #222;">{{ vm.project_summary.unit_mix_display }}</dd>
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Commercial</dt>
+        <dd style="color: #222;">{{ vm.project_summary.commercial_display }}</dd>
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Affordability</dt>
+        <dd style="color: #222;">{{ vm.project_summary.affordability_display }}</dd>
+      </dl>
+    </div>
+    {% endif %}
 
     <!-- 1. Site Feasibility Snapshot -->
     <div class="card summary-card">
