@@ -697,10 +697,17 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
                 depends.append("Unit mix, bedroom count, commercial area, affordable status")
 
         elif mr.module == "setback":
+            has_edges = bool(mr.module_payload.get("edges"))
             if not covers:
-                covers.append("Zone-family setback rule identification")
+                if has_edges:
+                    covers.append("Zone-family rules and provisional per-edge yard values (edge roles unconfirmed)")
+                else:
+                    covers.append("Zone-family setback rule identification")
             if not depends:
-                depends.append("Lot-edge geometry, alley conditions, frontage conditions")
+                if has_edges:
+                    depends.append("Edge role confirmation (front/rear/side), alley conditions, frontage conditions")
+                else:
+                    depends.append("Lot-edge geometry, alley conditions, frontage conditions")
 
         elif mr.module == "zimas_linked_docs":
             if not covers:

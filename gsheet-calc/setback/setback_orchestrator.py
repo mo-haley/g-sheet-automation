@@ -311,6 +311,16 @@ def _build_plain_language_result(result: SetbackResult, output: SetbackOutput) -
             f"{n} edge(s) computed with baseline values; governing may differ."
         )
 
+    # Provisional case: edges present but classifications are manual_confirm
+    if result.manual_review_reasons and result.overall_status == "provisional":
+        governing = result.inherited_yard_family or baseline
+        edge_parts = [_edge_value_str(e) for e in result.edges]
+        edges_str = "; ".join(edge_parts)
+        return (
+            f"Governing yard family: {governing}. "
+            f"{n} edge(s) with provisional values (edge roles unconfirmed): {edges_str}."
+        )
+
     # Clean confirmed/overridden case
     governing = result.inherited_yard_family or baseline
     edge_parts = [_edge_value_str(e) for e in result.edges]

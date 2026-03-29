@@ -17,9 +17,11 @@ Usage:
     # With explicit parking lane selection:
     result = run_app(site, project, project_id="proj-001", parking_lane="none")
 
-Note on setbacks: Site does not carry lot-edge geometry, so the setback module
-runs in THIN mode from standard site data. Callers with edge geometry should
-call run_setback_module() directly with a populated SetbackProjectInputs.
+Note on setbacks: When Site.parcel_geometry is available, lot-line edges are
+derived automatically and the setback module can reach PARTIAL coverage.
+All geometry-derived edges are typed as "interior" (conservative: geometry
+alone cannot determine street/alley roles). When geometry is missing or
+unusable, the module falls back to THIN mode.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from density.density_orchestrator import run_density_module
 from ed1.models import ED1Input
 from ed1.ed1_orchestrator import run_ed1_module
 from parking.parking_orchestrator import run_parking_module
+from setback.geometry_edges import derive_edges_from_geometry
 from setback.models import SetbackProjectInputs
 from setback.setback_orchestrator import run_setback_module
 from zimas_linked_docs.models import ZimasLinkedDocInput
@@ -39,15 +42,26 @@ from zimas_linked_docs.orchestrator import run_zimas_linked_doc_module
 
 
 def build_setback_inputs_from_site(site: Site) -> SetbackProjectInputs:
-    """Build a minimal SetbackProjectInputs from Site fields.
+    """Build SetbackProjectInputs from Site fields.
 
-    Site does not carry lot-edge geometry, so the returned inputs have no
-    edges. The setback module will run in THIN mode (zone resolved, no edge
-    values computed). Callers with edge geometry should build
-    SetbackProjectInputs directly.
+    When Site.parcel_geometry contains a usable ESRI polygon, derives
+    lot-line edges from the boundary segments. All derived edges use
+    edge_type="interior" (geometry alone cannot distinguish street-facing
+    from interior lot lines). This moves setback coverage from THIN to
+    PARTIAL when geometry is available.
+
+    When geometry is missing or unusable, returns empty edges and the
+    setback module runs in THIN mode as before.
     """
+    lot_type = getattr(site, "lot_type", "interior") or "interior"
+
+    edges, geo_meta = derive_edges_from_geometry(site.parcel_geometry)
+
     return SetbackProjectInputs(
-        lot_type=getattr(site, "lot_type", "interior") or "interior",
+        lot_type=lot_type,
+        edges=edges,
+        lot_width=geo_meta.get("lot_width_ft"),
+        lot_depth=geo_meta.get("lot_depth_ft"),
     )
 
 
