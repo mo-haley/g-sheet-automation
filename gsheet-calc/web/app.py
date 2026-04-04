@@ -121,11 +121,6 @@ def _build_project_from_form(form) -> Project:
     )
 
 
-def _get_policy_path(form) -> str:
-    """Determine the selected policy path from the form."""
-    return form.get("policy_path", "base_zoning")
-
-
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html", error=None)
@@ -179,15 +174,6 @@ def run_analysis():
         site.survey_lot_area_sf = lot_area_override
         site.lot_area_sf = lot_area_override
 
-    # Policy path label
-    policy_path = _get_policy_path(request.form)
-    policy_labels = {
-        "base_zoning": "Base Zoning Only",
-        "toc": "Transit Oriented Communities (TOC)",
-        "density_bonus": "State Density Bonus",
-        "affordable_100": "100% Affordable Housing",
-    }
-
     # Run the modular pipeline (density, FAR, parking, setback, ED1, zimas_linked_docs)
     project_id = hashlib.md5(f"{address}-{id(project)}".encode()).hexdigest()[:12]
     app_result = run_app(site, project, project_id=project_id)
@@ -204,7 +190,6 @@ def run_analysis():
     vm = build_snapshot_view(
         site, app_result,
         project=project,
-        policy_path_label=policy_labels.get(policy_path, policy_path),
     )
 
     # Debug trace — only in dev mode with ?debug=1

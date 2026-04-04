@@ -25,20 +25,8 @@
     .checkbox-group input[type="checkbox"] { width: auto; }
     .section-note { font-size: 0.73rem; color: #888; margin-bottom: 12px; font-style: italic; }
 
-    /* Policy path radio group */
-    .policy-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .policy-option { position: relative; }
-    .policy-option input { position: absolute; opacity: 0; }
-    .policy-option label {
-      display: block; padding: 8px 16px; border: 1px solid #ccc; border-radius: 5px;
-      font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: all 0.15s;
-    }
-    .policy-option input:checked + label { background: #2F5496; color: #fff; border-color: #2F5496; }
-    .policy-option label:hover { border-color: #2F5496; }
-
     /* Affordability sub-section */
-    .affordability-inputs { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; }
-    .affordability-inputs.visible { display: block; }
+    .affordability-inputs { margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; }
 
     /* Conditional sub-sections */
     .conditional-section { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd; }
@@ -74,7 +62,7 @@
 
     @media (max-width: 600px) {
       .form-row, .form-row.triple, .form-row.quad { grid-template-columns: 1fr; }
-      .policy-options, .parking-options { flex-direction: column; }
+      .parking-options { flex-direction: column; }
     }
   </style>
 </head>
@@ -175,7 +163,6 @@
       <!-- 3. Entitlement / Policy Path -->
       <div class="card">
         <h2>Entitlement / Policy Path</h2>
-        <p class="section-note">Select the incentive program to test. Base zoning results are always included for comparison.</p>
 
         <!-- 100% Affordable gate -->
         <div class="form-row single" style="margin-bottom: 14px;">
@@ -185,26 +172,8 @@
             <span class="hint" style="margin-left: 4px;">Check if all units (excluding manager's unit) are restricted affordable. Activates Track B density bonus and AB 1287 calculations.</span>
           </div>
         </div>
-        <div class="policy-options">
-          <div class="policy-option">
-            <input type="radio" id="path_base" name="policy_path" value="base_zoning" {{ 'checked' if not request.form.get('policy_path') or request.form.get('policy_path') == 'base_zoning' }}>
-            <label for="path_base">Base Zoning Only</label>
-          </div>
-          <div class="policy-option">
-            <input type="radio" id="path_toc" name="policy_path" value="toc" {{ 'checked' if request.form.get('policy_path') == 'toc' }}>
-            <label for="path_toc">TOC</label>
-          </div>
-          <div class="policy-option">
-            <input type="radio" id="path_db" name="policy_path" value="density_bonus" {{ 'checked' if request.form.get('policy_path') == 'density_bonus' }}>
-            <label for="path_db">Density Bonus</label>
-          </div>
-          <div class="policy-option">
-            <input type="radio" id="path_aff" name="policy_path" value="affordable_100" {{ 'checked' if request.form.get('policy_path') == 'affordable_100' }}>
-            <label for="path_aff">100% Affordable</label>
-          </div>
-        </div>
 
-        <!-- Affordability inputs - shown when TOC/DB/100% selected -->
+        <!-- Affordability inputs -->
         <div class="affordability-inputs" id="affordabilityInputs">
           <p class="section-note">Affordability mix (% of total units)</p>
           <div class="form-row quad">
@@ -431,55 +400,7 @@
     }
     document.getElementById('alley_adjacent').addEventListener('change', updateAlleyVisibility);
 
-    // 3. Affordability inputs (existing behavior)
-    function updateAffordabilityVisibility() {
-      var selected = document.querySelector('input[name="policy_path"]:checked');
-      var affSection = document.getElementById('affordabilityInputs');
-      if (selected && (selected.value === 'toc' || selected.value === 'density_bonus' || selected.value === 'affordable_100')) {
-        affSection.classList.add('visible');
-      } else {
-        affSection.classList.remove('visible');
-        resetInputs(affSection);
-      }
-    }
-
-    // 4. Policy-specific advanced fields
-    function updatePolicyAdvancedVisibility() {
-      var selected = document.querySelector('input[name="policy_path"]:checked');
-      var val = selected ? selected.value : 'base_zoning';
-      var policyRow = document.getElementById('advancedPolicyRow');
-      var pwGroup = document.getElementById('prevailingWageGroup');
-      var ccGroup = document.getElementById('commercialCorridorGroup');
-
-      // Prevailing wage: show for TOC, DB, 100% Affordable
-      var showPW = (val === 'toc' || val === 'density_bonus' || val === 'affordable_100');
-      setRowVisible(pwGroup, showPW);
-      if (!showPW) {
-        var pwCb = document.getElementById('prevailing_wage');
-        if (pwCb) pwCb.checked = false;
-      }
-
-      // AB 2011 corridor: show for DB, 100% Affordable
-      var showCC = (val === 'density_bonus' || val === 'affordable_100');
-      setRowVisible(ccGroup, showCC);
-      if (!showCC) {
-        var ccCb = document.getElementById('commercial_corridor');
-        if (ccCb) ccCb.checked = false;
-      }
-
-      // Hide entire row if nothing visible
-      setRowVisible(policyRow, showPW || showCC);
-    }
-
-    // Bind policy path change to both affordability and policy-advanced visibility
-    document.querySelectorAll('input[name="policy_path"]').forEach(function(radio) {
-      radio.addEventListener('change', function() {
-        updateAffordabilityVisibility();
-        updatePolicyAdvancedVisibility();
-      });
-    });
-
-    // 5. 100% Affordable checkbox — visual Track B indicator
+    // 3. 100% Affordable checkbox — visual Track B indicator
     function updateHundredPctAffordable() {
       var cb = document.getElementById('hundred_pct_affordable');
       var group = document.getElementById('hundredPctAffordableGroup');
@@ -500,8 +421,6 @@
     // Init all conditional visibility on load
     updateCommercialVisibility();
     updateAlleyVisibility();
-    updateAffordabilityVisibility();
-    updatePolicyAdvancedVisibility();
     updateHundredPctAffordable();
   </script>
 </body>
