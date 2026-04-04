@@ -1,106 +1,34 @@
-"""Transit Oriented Communities (TOC) eligibility screen."""
+"""Transit Oriented Communities (TOC) eligibility screen.
 
-import json
+STUB: The TOC program was superseded by CHIP effective February 11, 2025.
+Transit geography (TOC tier, proximity to major transit) is preserved in
+site data for MIIP/AHIP eligibility screening. Actual TOC density and
+parking incentives are now computed in the density module TOC lane.
 
-from config.settings import DATA_DIR
-from models.issue import ReviewIssue
+This file is retained as a stub so any callers referencing screen_toc()
+continue to receive a valid ScenarioResult rather than an import error.
+Do not delete this file.
+"""
+
 from models.project import Project
 from models.scenario import ScenarioResult
 from models.site import Site
 
 
-def _load_screen_data() -> dict:
-    path = DATA_DIR / "screen_thresholds.json"
-    return json.loads(path.read_text())
-
-
 def screen_toc(site: Site, project: Project) -> ScenarioResult:
-    """Screen for TOC eligibility based on site TOC tier."""
-    data = _load_screen_data()
-    toc_data = data.get("toc", {})
-    tiers = toc_data.get("tiers", {})
-    issues: list[ReviewIssue] = []
-    missing: list[str] = []
-    unresolved: list[str] = []
-    notes: list[str] = []
-    parking_notes: list[str] = []
+    """Return a fixed advisory result — TOC program superseded by CHIP.
 
-    if site.toc_tier is None:
-        missing.append("toc_tier")
-        if getattr(site, "toc_tier_source", "unavailable") == "unavailable":
-            summary = (
-                "TOC tier could not be determined from ZIMAS API. "
-                "Check the ZIMAS website parcel profile to confirm TOC eligibility."
-            )
-        else:
-            summary = "Site is not in a TOC-eligible area."
-        return ScenarioResult(
-            name="TOC Incentive Program",
-            status="unresolved",
-            summary=summary,
-            missing_inputs=missing,
-        )
-
-    tier_key = str(site.toc_tier)
-    tier_info = tiers.get(tier_key)
-
-    if not tier_info:
-        return ScenarioResult(
-            name="TOC Incentive Program",
-            status="likely_ineligible",
-            summary=f"TOC tier {site.toc_tier} not recognized or site not in TOC area.",
-        )
-
-    # Check for specific plan conflicts
-    if site.specific_plan:
-        unresolved.append(
-            f"Specific plan '{site.specific_plan}' may conflict with TOC incentives."
-        )
-        issues.append(
-            ReviewIssue(
-                id="ADV-TOC-001",
-                category="advisory",
-                severity="high",
-                title="TOC / specific plan conflict",
-                description=(
-                    f"Site is in specific plan '{site.specific_plan}' and TOC tier {site.toc_tier}. "
-                    "TOC incentives may not apply if specific plan governs."
-                ),
-                affected_fields=["toc_tier"],
-                suggested_review_role="planner",
-            )
-        )
-
-    # Affordability check
-    if project.affordability is None:
-        missing.append("affordability")
-        notes.append("Affordability plan not provided. TOC requires affordable set-aside.")
-
-    density_bonus = tier_info.get("density_bonus_pct", 0)
-    far_bonus = tier_info.get("far_bonus_pct", 0)
-    height_bonus = tier_info.get("height_bonus_stories", 0)
-    parking_reduction = tier_info.get("parking_reduction", "")
-    os_reduction = tier_info.get("open_space_reduction_pct", 0)
-
-    notes.extend([
-        f"TOC Tier {site.toc_tier}:",
-        f"  Density bonus: +{density_bonus}%",
-        f"  FAR bonus: +{far_bonus}%",
-        f"  Height bonus: +{height_bonus} stories",
-        f"  Open space reduction: -{os_reduction}%",
-    ])
-    parking_notes.append(f"TOC parking: {parking_reduction}")
-
-    status = "likely_eligible" if not missing and not unresolved else "unresolved"
-
+    Transit geography (toc_tier, near_major_transit) is preserved in site
+    data for MIIP/AHIP eligibility screening. Current TOC lane calculations
+    are in the density module (density_toc_calc.py).
+    """
     return ScenarioResult(
         name="TOC Incentive Program",
-        status=status,
+        status="superseded",
         determinism="advisory",
-        summary=f"TOC Tier {site.toc_tier} screening. Advisory only.",
-        eligibility_notes=notes,
-        missing_inputs=missing,
-        unresolved=unresolved,
-        indicative_parking_notes=parking_notes,
-        issues=issues,
+        summary=(
+            "TOC program superseded by CHIP (Feb 11, 2025). "
+            "Transit geography preserved for MIIP/AHIP eligibility screening. "
+            "See density module TOC lane for current calculations."
+        ),
     )

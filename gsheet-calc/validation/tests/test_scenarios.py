@@ -15,24 +15,25 @@ from validation.fixtures.sites import c2_residential_site, simple_r3_site
 
 
 def test_toc_screen_no_tier():
-    """Site without TOC tier should be unresolved."""
-    site = simple_r3_site()  # No TOC tier
+    """TOC screen is now a stub — returns superseded status (TOC superseded by CHIP Feb 2025)."""
+    site = simple_r3_site()
     project = simple_r3_project()
     result = screen_toc(site, project)
 
-    assert result.status == "unresolved"
+    assert result.status == "superseded"
     assert result.determinism == "advisory"
-    assert "toc_tier" in result.missing_inputs
+    assert "CHIP" in result.summary
 
 
 def test_toc_screen_with_tier():
-    """C2 site with TOC tier 3 should screen as eligible (with caveats)."""
+    """TOC screen stub returns consistent superseded result regardless of tier."""
     site = c2_residential_site()  # Has toc_tier=3
     project = c2_residential_project()
     result = screen_toc(site, project)
 
     assert result.determinism == "advisory"
-    assert "Tier 3" in result.summary or any("Tier 3" in n for n in result.eligibility_notes)
+    assert result.status == "superseded"
+    assert "CHIP" in result.summary
 
 
 def test_density_bonus_no_affordability():

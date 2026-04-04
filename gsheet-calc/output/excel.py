@@ -66,6 +66,7 @@ def generate_workbook(
     scenarios: list[ScenarioResult],
     issues: list[ReviewIssue],
     output_path: Path,
+    parking_used_default_unit_mix: bool = False,
 ) -> Path:
     """Generate the full Excel workbook."""
     wb = Workbook()
@@ -152,7 +153,13 @@ def generate_workbook(
     _write_calc_tab(wb, "Density + FAR", density_results + far_results)
 
     # --- Tab 8: Parking Summary ---
-    _write_calc_tab(wb, "Parking Summary", parking_results)
+    _write_calc_tab(
+        wb, "Parking Summary", parking_results,
+        parking_fallback_note=(
+            "Unit mix not provided — parking based on fallback assumption (1.0 sp/unit); "
+            "actual requirement depends on habitable room counts."
+        ) if parking_used_default_unit_mix else None,
+    )
 
     # --- Tab 9: Open Space + Loading ---
     _write_calc_tab(wb, "Open Space + Loading", open_space_results + loading_results)
@@ -200,24 +207,69 @@ def generate_workbook(
     return output_path
 
 
-def _write_calc_tab(wb: Workbook, title: str, calcs: list[CalcResult]) -> None:
-    """Write a calculation results tab."""
+def _is_state_db_unlimited(cr: CalcResult) -> bool:
+    """Return True when this CalcResult represents the State DB unlimited (100% affordable) path."""
+    name_lower = cr.name.lower()
+    if "state db" not in name_lower and "state density" not in name_lower:
+        return False
+    # Unlimited path: value is None, "unlimited", or the legacy placeholder
+    if cr.value is None:
+        return True
+    val_lower = str(cr.value).lower().strip()
+    return val_lower in ("unlimited", "none", "no numerical limit on density", "")
+
+
+def _write_calc_tab(
+    wb: Workbook,
+    title: str,
+    calcs: list[CalcResult],
+    parking_fallback_note: str | None = None,
+) -> None:
+    """Write a calculation results tab.
+
+    State DB unlimited density rows receive special labels per §65915(f)(1).
+    If parking_fallback_note is provided, it is appended as a plain-text note
+    row after the calc rows (used when unit mix was not provided).
+    """
     ws = wb.create_sheet(title)
     _add_header_row(ws, [
         "Name", "Value", "Unit", "Formula", "Determinism", "Confidence",
         "Code Section", "Authority ID", "Steps", "Notes",
     ])
     for row, cr in enumerate(calcs, 2):
-        ws.cell(row=row, column=1, value=cr.name)
-        ws.cell(row=row, column=2, value=str(cr.value) if cr.value is not None else "N/A")
-        ws.cell(row=row, column=3, value=cr.unit)
-        ws.cell(row=row, column=4, value=cr.formula)
-        ws.cell(row=row, column=5, value=cr.determinism)
-        ws.cell(row=row, column=6, value=cr.confidence)
-        ws.cell(row=row, column=7, value=cr.code_section or "")
-        ws.cell(row=row, column=8, value=cr.authority_id or "")
-        ws.cell(row=row, column=9, value="; ".join(cr.intermediate_steps))
-        ws.cell(row=row, column=10, value="; ".join(cr.review_notes))
+        if _is_state_db_unlimited(cr):
+            # Unlimted density path — standardised labels per §65915(f)(1).
+            is_provisional = cr.confidence not in ("high",)
+            display_value = (
+                "No numerical limit on density (provisional — eligibility not confirmed)"
+                if is_provisional
+                else "No numerical limit on density"
+            )
+            override_notes = (
+                "Gov. Code §65915(f)(1) — 100% affordable set-aside required. "
+                "Eligibility requires unit-by-unit affordability covenant and income targeting."
+            )
+            ws.cell(row=row, column=1, value="State DB (100% Affordable — §65915(f)(1))")
+            ws.cell(row=row, column=2, value=display_value)
+            ws.cell(row=row, column=3, value=cr.unit)
+            ws.cell(row=row, column=4, value=cr.formula)
+            ws.cell(row=row, column=5, value=cr.determinism)
+            ws.cell(row=row, column=6, value=cr.confidence)
+            ws.cell(row=row, column=7, value=cr.code_section or "Gov. Code §65915(f)(1)")
+            ws.cell(row=row, column=8, value=cr.authority_id or "")
+            ws.cell(row=row, column=9, value="; ".join(cr.intermediate_steps))
+            ws.cell(row=row, column=10, value=override_notes)
+        else:
+            ws.cell(row=row, column=1, value=cr.name)
+            ws.cell(row=row, column=2, value=str(cr.value) if cr.value is not None else "N/A")
+            ws.cell(row=row, column=3, value=cr.unit)
+            ws.cell(row=row, column=4, value=cr.formula)
+            ws.cell(row=row, column=5, value=cr.determinism)
+            ws.cell(row=row, column=6, value=cr.confidence)
+            ws.cell(row=row, column=7, value=cr.code_section or "")
+            ws.cell(row=row, column=8, value=cr.authority_id or "")
+            ws.cell(row=row, column=9, value="; ".join(cr.intermediate_steps))
+            ws.cell(row=row, column=10, value="; ".join(cr.review_notes))
 
         if cr.determinism == "advisory":
             for col in range(1, 11):
@@ -226,5 +278,12 @@ def _write_calc_tab(wb: Workbook, title: str, calcs: list[CalcResult]) -> None:
             for col in range(1, 11):
                 ws.cell(row=row, column=col).fill = _review_fill
 
-    _add_footer(ws, len(calcs) + 2)
+    next_row = len(calcs) + 2
+    if parking_fallback_note:
+        note_row = next_row
+        ws.cell(row=note_row, column=1, value="NOTE").font = Font(bold=True, italic=True, size=9)
+        ws.cell(row=note_row, column=2, value=parking_fallback_note).font = Font(italic=True, size=9)
+        next_row += 1
+
+    _add_footer(ws, next_row)
     _auto_width(ws)

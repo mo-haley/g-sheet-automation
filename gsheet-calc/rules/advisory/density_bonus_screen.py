@@ -3,6 +3,8 @@
 import json
 
 from config.settings import DATA_DIR
+from density.density_ab1287_calc import compute_ab1287
+from density.density_state_db_calc import _compute_bonus_pct
 from models.issue import ReviewIssue
 from models.project import Project
 from models.scenario import ScenarioResult
@@ -72,9 +74,44 @@ def screen_density_bonus(site: Site, project: Project) -> ScenarioResult:
     if project.application_date and project.application_date >= "2026-01-01":
         notes.append(f"SB 92 commercial FAR cap applies (apps after {sb92.get('effective_date', '2026-01-01')}).")
 
-    # AB 1287 stacking
-    ab1287 = db_data.get("ab1287_stacking", {})
-    notes.append(f"AB 1287: {ab1287.get('notes', 'Stacking option available.')}")
+    # AB 1287 stacking — compute actual eligibility and bonus when affordability is provided
+    if project.affordability:
+        aff = project.affordability
+        is_for_sale = project.for_sale or False
+        primary_bonus_pct = _compute_bonus_pct(aff, is_for_sale)
+        ab1287_result = compute_ab1287(
+            affordability=aff,
+            is_for_sale=is_for_sale,
+            primary_bonus_pct=primary_bonus_pct,
+            base_units_raw=None,  # unit counts require full density calc
+        )
+        if ab1287_result.ab1287_eligible and ab1287_result.ab1287_stack_bonus_pct is not None:
+            yield_notes.append(
+                f"AB 1287 stacking: eligible — additional +{ab1287_result.ab1287_stack_bonus_pct:.2f}% "
+                f"stackable bonus ({ab1287_result.ab1287_statutory_authority}). "
+                f"Unit count requires full density calculation."
+            )
+            if ab1287_result.ab1287_incentives_available and ab1287_result.ab1287_incentives_available > 0:
+                yield_notes.append(
+                    f"AB 1287 incentives: {ab1287_result.ab1287_incentives_available} incentives/concessions available."
+                )
+        elif ab1287_result.ab1287_eligible:
+            yield_notes.append(
+                "AB 1287 stacking: project qualifies for primary threshold but "
+                "stackable set-aside below minimum (5% additional VLI or Moderate required)."
+            )
+        else:
+            reason = ab1287_result.ineligibility_reason or "Primary threshold not met"
+            yield_notes.append(f"AB 1287 stacking: not eligible — {reason}")
+    else:
+        ab1287_thresholds = db_data.get("ab1287_stacking", {}).get("eligibility_thresholds", {})
+        vli_req = ab1287_thresholds.get("primary_max_vli_pct", 15)
+        li_req = ab1287_thresholds.get("primary_max_li_pct", 24)
+        mod_req = ab1287_thresholds.get("primary_max_moderate_pct_for_sale", 44)
+        yield_notes.append(
+            f"AB 1287 stacking: requires affordability plan. "
+            f"Eligibility gate: ≥{vli_req}% VLI, ≥{li_req}% LI, or ≥{mod_req}% Moderate (for-sale)."
+        )
 
     parking_notes.append("Density bonus projects may qualify for reduced parking ratios.")
     labor_notes.append("Check prevailing wage requirements for density bonus projects.")

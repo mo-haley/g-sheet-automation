@@ -157,22 +157,35 @@ def _map_fire_hillside(site: Site) -> tuple[bool | None, bool | None]:
 
 
 def _is_100_pct_affordable(project: Project) -> bool | None:
-    """Derive 100% affordability from Project fields."""
+    """Derive 100% affordability from Project fields.
+
+    Checks the explicit hundred_pct_affordable flag first. If explicitly
+    False or None with no affordability plan, returns False immediately.
+    Falls back to affordability percentage derivation when the flag is None.
+    """
+    # Explicit flag takes precedence.
+    if project.hundred_pct_affordable is True:
+        return True
+    if project.hundred_pct_affordable is False:
+        return False
+    # hundred_pct_affordable is None — no affordability plan means not 100% affordable.
+    if project.affordability is None:
+        return False
+
+    # Derive from affordability plan percentages.
     if project.project_type and "affordable" in project.project_type.lower():
         # project_type alone isn't sufficient to confirm 100%
-        if project.affordability is not None:
-            market = project.affordability.market_pct
-            if market == 0.0:
-                return True
-            if market > 0.0:
-                return False
+        market = project.affordability.market_pct
+        if market == 0.0:
+            return True
+        if market > 0.0:
+            return False
         return None  # project_type suggests affordable but % unconfirmed
 
-    if project.affordability is not None:
-        if project.affordability.market_pct == 0.0:
-            return True
-        if project.affordability.market_pct > 0.0:
-            return False
+    if project.affordability.market_pct == 0.0:
+        return True
+    if project.affordability.market_pct > 0.0:
+        return False
 
     return None
 

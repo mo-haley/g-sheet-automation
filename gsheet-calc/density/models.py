@@ -146,6 +146,13 @@ class StateDBDensity(BaseModel):
     statutory_authority: str = ""
     status: str = "provisional"  # confirmed / provisional / unresolved
     issues: list[DensityIssue] = Field(default_factory=list)
+    # AB 1287 stacking fields (Gov. Code 65915(v)) — populated for mixed-income projects
+    ab1287_eligible: bool = False
+    ab1287_stack_bonus_pct: float | None = None
+    ab1287_stack_units: int | None = None
+    ab1287_total_units: int | None = None
+    ab1287_statutory_authority: str | None = None
+    ab1287_incentives_available: int | None = None
 
 
 class EligibilityChecks(BaseModel):

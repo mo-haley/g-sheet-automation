@@ -79,8 +79,52 @@
       "notes": "Applies to applications filed on or after 1/1/2026. Advisory flag only."
     },
     "ab1287_stacking": {
-      "description": "AB 1287 allows stacking state DB with local incentives",
-      "notes": "Advisory screening note. Eligibility depends on project specifics."
+      "description": "AB 1287 (2022) stackable density bonus — Gov. Code 65915(v)",
+      "statutory_authority": "Gov. Code §65915(v) [AB 1287, 2022]",
+      "eligibility_thresholds": {
+        "note": "Project must first qualify for the maximum 50% primary bonus",
+        "primary_max_vli_pct": 15,
+        "primary_max_li_pct": 24,
+        "primary_max_moderate_pct_for_sale": 44
+      },
+      "vli_stackable_table": {
+        "note": "Additional stackable set-aside (% VLI above primary threshold) → additional bonus %",
+        "applies_to": "rental_and_for_sale",
+        "stackable_min_pct": 5,
+        "stackable_max_pct": 10,
+        "table": {
+          "5": 20.00,
+          "6": 23.75,
+          "7": 27.50,
+          "8": 31.25,
+          "9": 35.00,
+          "10": 38.75
+        }
+      },
+      "moderate_stackable_table": {
+        "note": "Additional stackable set-aside (% Moderate above primary threshold) → additional bonus %",
+        "applies_to": "for_sale_only",
+        "stackable_min_pct": 5,
+        "stackable_max_pct": 15,
+        "table": {
+          "5": 20.00,
+          "6": 22.50,
+          "7": 25.00,
+          "8": 27.50,
+          "9": 30.00,
+          "10": 32.50,
+          "11": 35.00,
+          "12": 38.75,
+          "13": 42.50,
+          "14": 46.25,
+          "15": 50.00
+        }
+      },
+      "incentive_count_thresholds": {
+        "mixed_income_4_incentives_vli_pct": 16,
+        "mixed_income_4_incentives_moderate_for_sale_pct": 45,
+        "affordable_100_pct_incentives": 5
+      }
     }
   },
   "affordable_100pct": {

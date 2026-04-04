@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 
+from density.density_ab1287_calc import compute_ab1287
 from density.models import (
     AuthorityInterrupters,
     BaselineDensity,
@@ -255,9 +256,37 @@ def compute_state_db_density(
             confidence_impact="degrades_to_provisional",
         ))
 
+    # ── Governing base raw float (needed for AB 1287 rounding) ──────
+    # Determine the pre-rounded continuous value for the winning leg.
+    # This is used by the AB 1287 calculator so both primary and stackable
+    # bonuses are rounded independently against the same raw base.
+    if governing_source == "zoning":
+        base_units_raw: float = (
+            baseline.raw_calculation
+            if baseline.raw_calculation is not None
+            else float(governing_base)
+        )
+    elif (
+        governing_source == "specific_plan"
+        and interrupters.specific_plan_density_sf_per_du
+        and interrupters.specific_plan_density_sf_per_du > 0
+    ):
+        base_units_raw = lot_area / interrupters.specific_plan_density_sf_per_du
+    elif (
+        governing_source == "general_plan"
+        and gp_lookup is not None
+        and gp_lookup.min_sf_per_du
+        and gp_lookup.min_sf_per_du > 0
+    ):
+        base_units_raw = lot_area / gp_lookup.min_sf_per_du
+    else:
+        base_units_raw = float(governing_base)
+
     # ── Affordability ───────────────────────────────────────────────
     affordability = project.affordability
-    if not affordability:
+    explicit_100_pct_flag = project.hundred_pct_affordable is True
+
+    if not affordability and not explicit_100_pct_flag:
         issues.append(DensityIssue(
             step="STEP_5b_state_db",
             field="affordable_set_aside",
@@ -282,10 +311,10 @@ def compute_state_db_density(
     is_for_sale = project.for_sale or False
 
     set_aside = StateDBAffordableSetAside(
-        eli_pct=affordability.eli_pct,
-        vli_pct=affordability.vli_pct,
-        li_pct=affordability.li_pct,
-        moderate_pct=affordability.moderate_pct,
+        eli_pct=affordability.eli_pct if affordability else 0.0,
+        vli_pct=affordability.vli_pct if affordability else 0.0,
+        li_pct=affordability.li_pct if affordability else 0.0,
+        moderate_pct=affordability.moderate_pct if affordability else 0.0,
     )
 
     # ── Status floor from upstream ──────────────────────────────────
@@ -298,30 +327,41 @@ def compute_state_db_density(
     if not governing_base_confirmed and status_ceiling == "confirmed":
         status_ceiling = "provisional"
 
-    # ── 100% affordable path (fix #4) ──────────────────────────────
+    # ── 100% affordable path ────────────────────────────────────────
+    # Fires when the explicit hundred_pct_affordable checkbox is True,
+    # OR when affordability percentages sum to 100%.
     total_affordable_pct = (
-        affordability.eli_pct + affordability.vli_pct +
-        affordability.li_pct + affordability.moderate_pct
+        (affordability.eli_pct + affordability.vli_pct +
+         affordability.li_pct + affordability.moderate_pct)
+        if affordability else 0.0
     )
     percentage_indicates_100_aff = total_affordable_pct >= 100.0
+    is_100_pct_path = explicit_100_pct_flag or percentage_indicates_100_aff
 
-    if percentage_indicates_100_aff:
-        # Percentage alone indicates 100% affordable, but this is not
-        # a confirmed eligibility determination. Unlimited density under
-        # AB 1287 / Gov. Code 65915(f) requires verification beyond
-        # percentage math (e.g., unit-by-unit affordability covenant,
-        # income targeting confirmation, manager unit treatment).
+    if is_100_pct_path:
+        # Unlimited density under Gov. Code §65915(f)(1) requires verification
+        # beyond the checkbox or percentage math (unit-by-unit affordability
+        # covenant, income targeting confirmation, manager unit treatment).
+        if explicit_100_pct_flag and not percentage_indicates_100_aff:
+            msg = (
+                "hundred_pct_affordable flag is True. Unlimited density under "
+                "Gov. Code §65915(f)(1) [AB 2334, 2022] requires explicit eligibility "
+                "verification (unit-by-unit affordability covenant, income targeting, "
+                "manager unit treatment). Affordability percentages not fully specified."
+            )
+        else:
+            msg = (
+                f"Affordability percentages sum to {total_affordable_pct:.0f}%, "
+                f"indicating potential 100% affordable status. Unlimited density "
+                f"under Gov. Code §65915(f)(1) [AB 2334, 2022] requires explicit "
+                f"eligibility verification beyond percentage math (covenant confirmation, "
+                f"income targeting, manager unit treatment)."
+            )
         issues.append(DensityIssue(
             step="STEP_5b_state_db",
             field="is_100_pct_affordable",
             severity="warning",
-            message=(
-                f"Affordability percentages sum to {total_affordable_pct:.0f}%, "
-                f"indicating potential 100% affordable status. Unlimited density "
-                f"under AB 1287 / Gov. Code 65915(f) requires explicit eligibility "
-                f"verification beyond percentage math (covenant confirmation, "
-                f"income targeting, manager unit treatment)."
-            ),
+            message=msg,
             action_required="Confirm 100% affordable eligibility with HCIDLA or project counsel.",
             confidence_impact="degrades_to_provisional",
         ))
@@ -347,7 +387,7 @@ def compute_state_db_density(
             rental_or_for_sale="for_sale" if is_for_sale else "rental",
             is_100_pct_affordable=True,
             is_100_pct_affordable_confirmed=False,
-            statutory_authority="AB 1287 / Gov. Code 65915(f)",
+            statutory_authority="Gov. Code §65915(f)(1) [AB 2334, 2022]",
             status=status,
             issues=issues,
         )
@@ -372,6 +412,14 @@ def compute_state_db_density(
     # Final status: capped by upstream ceiling
     status = status_ceiling
 
+    # ── AB 1287 stacking (mixed-income projects) ────────────────────
+    ab1287 = compute_ab1287(
+        affordability=affordability,
+        is_for_sale=is_for_sale,
+        primary_bonus_pct=bonus_pct,
+        base_units_raw=base_units_raw,
+    )
+
     return StateDBDensity(
         base_density_zoning=base_zoning,
         base_density_specific_plan=base_sp,
@@ -390,7 +438,13 @@ def compute_state_db_density(
         rental_or_for_sale="for_sale" if is_for_sale else "rental",
         is_100_pct_affordable=False,
         is_100_pct_affordable_confirmed=False,
-        statutory_authority=f"Gov. Code 65915 ({bonus_pct:.0f}% bonus)",
+        statutory_authority=f"Gov. Code §65915 ({bonus_pct:.0f}% bonus)",
         status=status,
         issues=issues,
+        ab1287_eligible=ab1287.ab1287_eligible,
+        ab1287_stack_bonus_pct=ab1287.ab1287_stack_bonus_pct,
+        ab1287_stack_units=ab1287.ab1287_stack_units,
+        ab1287_total_units=ab1287.ab1287_total_units,
+        ab1287_statutory_authority=ab1287.ab1287_statutory_authority,
+        ab1287_incentives_available=ab1287.ab1287_incentives_available,
     )

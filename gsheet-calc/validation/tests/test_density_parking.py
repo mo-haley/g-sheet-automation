@@ -261,7 +261,7 @@ def test_case1_state_db_unlimited():
     assert output.state_db_density is not None
     assert output.state_db_density.is_100_pct_affordable is True
     assert output.state_db_density.bonus_percentage_is_unlimited is True
-    assert output.state_db_density.statutory_authority == "AB 1287 / Gov. Code 65915(f)"
+    assert output.state_db_density.statutory_authority == "Gov. Code §65915(f)(1) [AB 2334, 2022]"
 
 
 def test_case1_density_result():

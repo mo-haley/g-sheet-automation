@@ -103,6 +103,8 @@ class Project(BaseModel):
 
     # Screening inputs
     project_type: str = "market_rate"
+    # Explicit Track A/B gate: True = 100% affordable, False = mixed/market, None = derive from percentages
+    hundred_pct_affordable: bool | None = None
     affordability: AffordabilityPlan | None = None
     prevailing_wage_committed: bool | None = None
     adaptive_reuse: bool = False

@@ -142,6 +142,20 @@ def derive_development_posture(project: Project, override: str | None = None) ->
             return override
         return "unknown"
 
+    # Explicit checkbox takes precedence over percentage derivation.
+    if project.hundred_pct_affordable is True:
+        return "affordable_100"
+    if project.hundred_pct_affordable is False:
+        # Explicitly not 100% affordable — derive mixed vs market from percentages.
+        aff = project.affordability
+        if aff is None:
+            return "market_rate"
+        total_affordable = aff.eli_pct + aff.vli_pct + aff.li_pct + aff.moderate_pct
+        if total_affordable > 0.0:
+            return "mixed"
+        return "market_rate"
+
+    # hundred_pct_affordable is None — derive from affordability percentages as before.
     aff = project.affordability
     if aff is None:
         return "market_rate"
