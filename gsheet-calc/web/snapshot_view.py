@@ -152,6 +152,15 @@ class ProjectSummary(BaseModel):
     parking_strategy: str = ""
 
 
+class AB1287Section(BaseModel):
+    """AB 1287 stacking bonus view model (populated when state_db lane was evaluated)."""
+    eligible: bool = False
+    total_units: int | None = None
+    stack_bonus_pct: float | None = None
+    incentives_available: int | None = None
+    ineligibility_reason: str | None = None
+
+
 class SnapshotViewModel(BaseModel):
     """Complete view model for feasibility snapshot (address-only or full analysis)."""
 
@@ -162,6 +171,7 @@ class SnapshotViewModel(BaseModel):
     module_coverage: list[ModuleCoverage] = Field(default_factory=list)
     scenarios: list[ScenarioRow] = Field(default_factory=list)
     ed1_screening: ED1ScreeningSection | None = None
+    ab1287: AB1287Section | None = None
     module_cards: list[ModuleCard] = Field(default_factory=list)
     caveats: list[Caveat] = Field(default_factory=list)
     best_next_inputs: list[MissingInput] = Field(default_factory=list)
@@ -656,6 +666,23 @@ def _build_ed1_section(app: AppResult) -> ED1ScreeningSection | None:
     )
 
 
+def _build_ab1287_section(app: AppResult) -> "AB1287Section | None":
+    """Extract AB 1287 stacking fields from the density module's state_db output."""
+    density_mr = _by_name(app.module_results, "density")
+    if density_mr is None:
+        return None
+    state_db = (density_mr.module_payload.get("full_output") or {}).get("state_db_density")
+    if not state_db:
+        return None
+    return AB1287Section(
+        eligible=state_db.get("ab1287_eligible", False),
+        total_units=state_db.get("ab1287_total_units"),
+        stack_bonus_pct=state_db.get("ab1287_stack_bonus_pct"),
+        incentives_available=state_db.get("ab1287_incentives_available"),
+        ineligibility_reason=state_db.get("ineligibility_reason"),
+    )
+
+
 def _build_module_cards(app: AppResult) -> list[ModuleCard]:
     cards: list[ModuleCard] = []
 
@@ -1079,6 +1106,7 @@ def build_snapshot_view(
         module_coverage=_build_module_coverage(app),
         scenarios=_build_scenarios(site, app),
         ed1_screening=_build_ed1_section(app),
+        ab1287=_build_ab1287_section(app),
         module_cards=_build_module_cards(app),
         caveats=_build_caveats(site, app, project=project, policy_path_label=policy_path_label),
         best_next_inputs=_build_best_next_inputs(site, app),
