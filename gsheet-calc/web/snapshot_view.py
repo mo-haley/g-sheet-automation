@@ -431,7 +431,7 @@ def _build_signals(site: Site, app: AppResult) -> list[Signal]:
             )
     if not comparison and site.toc_tier and density and density.coverage_level != CoverageLevel.UNCERTAIN:
         comparison = Signal(
-            text="Base zoning vs TOC comparison is the primary feasibility question for this site.",
+            text="Base zoning vs transit-area bonus comparison is the primary feasibility question for this site.",
             tone="neutral",
         )
 
@@ -523,14 +523,36 @@ def _build_scenarios(site: Site, app: AppResult) -> list[ScenarioRow]:
       (detected field, module output, or parcel attribute).
     - No filler rows.  If a scenario has no site trigger, it is omitted.
     - "why_shown" traces back to the specific detected data point.
+    - AB 1287 appears as a row when state_db is a candidate lane.
     """
     rows: list[ScenarioRow] = []
     density = _by_name(app.module_results, "density")
 
+    # Extract unit counts from candidate_routes for display
+    base_units: int | None = None
+    toc_units: int | None = None
+    state_db_units: int | None = None
+    state_db_unlimited: bool = False
+    if density:
+        for c in (density.module_payload.get("candidate_routes") or []):
+            if not isinstance(c, dict):
+                continue
+            lane = c.get("lane", "")
+            if lane == "none":
+                base_units = c.get("units")
+            elif lane == "toc":
+                toc_units = c.get("units")
+            elif lane == "state_db":
+                state_db_units = c.get("units")
+                state_db_unlimited = bool(c.get("unlimited"))
+
     # 1. Base zoning — always shown
-    base_effect = "Baseline evaluation path"
-    if density and density.coverage_level == CoverageLevel.COMPLETE:
+    if base_units is not None:
+        base_effect = f"Baseline: {base_units} units under base zoning"
+    elif density and density.coverage_level == CoverageLevel.COMPLETE:
         base_effect = "Density and parking resolvable under base zoning"
+    else:
+        base_effect = "Baseline evaluation path"
     rows.append(ScenarioRow(
         scenario="Base zoning only",
         why_shown="Default evaluation path for any site",
@@ -563,16 +585,22 @@ def _build_scenarios(site: Site, app: AppResult) -> list[ScenarioRow]:
 
     # 3. TOC incentive — only if toc_tier detected
     if site.toc_tier:
+        if toc_units is not None and base_units is not None:
+            toc_effect = f"Baseline: {base_units} units → TOC: {toc_units} units (+{toc_units - base_units})"
+        elif toc_units is not None:
+            toc_effect = f"TOC path: {toc_units} units possible"
+        else:
+            toc_effect = "Could materially change density and parking assumptions"
         rows.append(ScenarioRow(
-            scenario="TOC incentive screening",
-            why_shown=f"ZIMAS TOC Tier {site.toc_tier} detected on parcel",
+            scenario="Transit Oriented Communities (TOC)",
+            why_shown=f"ZIMAS reports TOC Tier {site.toc_tier} on this parcel",
             appears_relevant=Relevance.YES,
-            likely_effect="Could materially change density and parking assumptions",
+            likely_effect=toc_effect,
             key_unknowns="Affordability commitment level, project program",
             next_input_needed="Affordability strategy (ELI/VLI/LI percentages)",
         ))
 
-    # 4. State Density Bonus — only if density module found multiple candidate routes
+    # 4. State Density Bonus — only if density module found state_db as candidate
     if density:
         candidates = density.module_payload.get("candidate_routes") or []
         has_state_db = any(
@@ -580,13 +608,54 @@ def _build_scenarios(site: Site, app: AppResult) -> list[ScenarioRow]:
             for c in candidates
         ) if candidates else False
         if has_state_db:
+            if state_db_unlimited:
+                state_db_effect = "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+            elif state_db_units is not None and base_units is not None:
+                diff = state_db_units - base_units
+                state_db_effect = (
+                    f"Baseline: {base_units} units → State DB: {state_db_units} units (+{diff}). "
+                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                )
+            elif state_db_units is not None:
+                state_db_effect = (
+                    f"State Density Bonus path: {state_db_units} units possible. "
+                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                )
+            else:
+                state_db_effect = (
+                    "May increase allowable density above base zoning. "
+                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                )
             rows.append(ScenarioRow(
-                scenario="State Density Bonus",
+                scenario="State Density Bonus Law (Gov. Code §65915)",
                 why_shown="Density module identified state_db as a candidate lane",
                 appears_relevant=Relevance.POSSIBLE,
-                likely_effect="May increase allowable density above base zoning",
+                likely_effect=state_db_effect,
                 key_unknowns="Affordability commitment, prevailing wage status",
                 next_input_needed="Affordability percentages and wage commitment",
+            ))
+
+            # 4b. AB 1287 stacking — shown when state_db is a candidate lane.
+            # Use computed data from decision-grade mode if available; otherwise show screening text.
+            state_db_payload = (density.module_payload.get("full_output") or {}).get("state_db_density")
+            if state_db_payload:
+                ab1287_units = state_db_payload.get("ab1287_total_units")
+                ab1287_pct = state_db_payload.get("ab1287_stack_bonus_pct")
+                if ab1287_units is not None:
+                    ab_effect = f"AB 1287 stacking: {ab1287_units} total units"
+                    if ab1287_pct:
+                        ab_effect += f" ({ab1287_pct:.1f}% additional bonus)"
+                else:
+                    ab_effect = "Additional 20-50% density bonus may stack on top of primary State DB bonus for projects meeting threshold affordability"
+            else:
+                ab_effect = "Additional 20-50% density bonus may stack on top of primary State DB bonus for projects meeting threshold affordability"
+            rows.append(ScenarioRow(
+                scenario="AB 1287 Stacking Bonus",
+                why_shown="State Density Bonus is a candidate lane — AB 1287 stacking may apply",
+                appears_relevant=Relevance.POSSIBLE,
+                likely_effect=ab_effect,
+                key_unknowns="Affordability commitment and unit count required",
+                next_input_needed="Affordability percentages",
             ))
 
     return rows
@@ -695,6 +764,7 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
 
         covers: list[str] = []
         depends: list[str] = []
+        parking_provisional = False
 
         # Pull from findings for "covers" and from issues/warnings for "depends"
         for f in mr.findings:
@@ -722,6 +792,7 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
                 covers.append("Parking code family and transit-reduction eligibility")
             if not depends:
                 depends.append("Unit mix, bedroom count, commercial area, affordable status")
+                parking_provisional = True
 
         elif mr.module == "setback":
             has_edges = bool(mr.module_payload.get("edges"))
@@ -748,10 +819,17 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
             if not depends:
                 depends.append("Counted floor area for compliance check")
 
+        # Fix D: provisional prefix when parking unit mix not yet entered
+        # Fix C: replace "STATE DB" with "State Density Bonus"
+        current_read = mr.interpretation.plain_language_result
+        if parking_provisional:
+            current_read = "[Provisional — unit mix not entered] " + current_read
+        current_read = current_read.replace("STATE DB", "State Density Bonus")
+
         cards.append(ModuleCard(
             module_name=_module_display(mr.module),
             status=status,
-            current_read=mr.interpretation.plain_language_result,
+            current_read=current_read,
             covers_now=covers[:5],
             depends_on_inputs=depends[:5],
             sensitivity=sens,
@@ -792,7 +870,7 @@ def _build_caveats(
     if not has_policy and not has_affordability:
         caveats.append(Caveat(
             text="Affordability/incentive path not selected",
-            consequence="Scenario comparisons are indicative only; TOC and State DB paths not confirmed",
+            consequence="Scenario comparisons are indicative only; Transit-area and State Density Bonus paths not confirmed",
         ))
 
     if site.specific_plan or site.overlay_zones:
@@ -855,7 +933,7 @@ def _build_best_next_inputs(site: Site, app: AppResult) -> list[MissingInput]:
     if site.toc_tier:
         ranked.append(MissingInput(
             name="Affordability strategy",
-            why_it_matters=f"Determines whether TOC Tier {site.toc_tier} incentives apply to density and parking",
+            why_it_matters=f"Determines whether TOC Tier {site.toc_tier} bonuses apply to density and parking",
             affects_modules=["Density", "Parking"],
         ))
     elif density:
@@ -937,11 +1015,11 @@ def _build_missing_inputs() -> list[MissingInputGroup]:
                 ),
                 MissingInput(
                     name="Affordability strategy",
-                    why_it_matters="Triggers TOC, State Density Bonus, or 100% affordable path",
+                    why_it_matters="Triggers TOC, State Density Bonus Law, or ED1 (100% affordable) path",
                     affects_modules=["Density", "Parking"],
                 ),
                 MissingInput(
-                    name="TOC / density bonus intent",
+                    name="TOC or State Density Bonus intent",
                     why_it_matters="Materially changes allowable density and parking minimums",
                     affects_modules=["Density", "Parking"],
                 ),
@@ -979,7 +1057,7 @@ def _build_sources(site: Site, app: AppResult) -> list[SourceEntry]:
         zimas_detail += f"; AMBIGUOUS: {len(site.diag_all_zone_strings)} zone strings returned"
     sources.append(SourceEntry(
         source_type="ZIMAS parcel lookup",
-        informed="Address, APN, lot area, zoning, overlays, TOC tier, transit flags",
+        informed="Address, APN, lot area, zoning, overlays, TOC tier, AB 2097 status, transit flags",
         detail=zimas_detail,
         limitation="Parcel geometry not included; lot-edge dimensions not derivable",
     ))

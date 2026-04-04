@@ -158,6 +158,29 @@
       .scenario-table { font-size: 0.72rem; }
       .scenario-table th, .scenario-table td { padding: 4px; }
     }
+
+    /* Appendix */
+    .appendix-details { margin-top: 24px; }
+    .appendix-details > summary { cursor: pointer; font-size: 0.9rem; font-weight: 700; color: #2F5496; padding: 10px 16px; background: #f0f4fa; border-radius: 6px; border: 1px solid #d0daf0; list-style: none; display: flex; align-items: center; gap: 8px; }
+    .appendix-details > summary::-webkit-details-marker { display: none; }
+    .appendix-details > summary::before { content: "▶"; font-size: 0.7rem; transition: transform 0.15s; }
+    .appendix-details[open] > summary::before { transform: rotate(90deg); }
+    .appendix-details > summary .appendix-title { flex: 1; }
+    .appendix-inner { padding-top: 8px; }
+
+    /* Page section labels */
+    .page-label { font-size: 0.65rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+    /* ED1 compact note */
+    .ed1-compact-note { background: #f3e5f5; border-left: 3px solid #7b1fa2; border-radius: 4px; padding: 10px 14px; margin-top: 12px; }
+    .ed1-compact-note-title { font-size: 0.72rem; font-weight: 700; color: #7b1fa2; text-transform: uppercase; margin-bottom: 6px; }
+    .ed1-compact-note ul { list-style: none; padding: 0; margin: 0; }
+    .ed1-compact-note li { font-size: 0.82rem; color: #4a148c; padding: 2px 0 2px 14px; position: relative; }
+    .ed1-compact-note li::before { content: "-"; position: absolute; left: 0; color: #9c27b0; }
+
+    @media print {
+      .page-break { page-break-before: always; }
+    }
   </style>
 </head>
 <body>
@@ -183,6 +206,11 @@
       <a href="/export/{{ run_id }}" class="btn btn-primary">Download Excel</a>
       {% endif %}
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE 1 — EXECUTIVE SUMMARY
+         Project Inputs · Site Snapshot · Key Signals (top 3)
+    ═══════════════════════════════════════════════════════════ -->
 
     {% if vm.project_summary %}
     <!-- Project Inputs -->
@@ -223,63 +251,24 @@
       {% endif %}
     </div>
 
-    <!-- 2. Key Signals -->
+    <!-- 2. Key Signals — top 3 only on Page 1 (opportunity / uncertainty / constraint) -->
     {% if vm.signals %}
     <div class="card">
       <h2><span class="section-num">2</span>Key Signals</h2>
       <ul class="signal-list">
-        {% for signal in vm.signals %}
+        {% for signal in vm.signals[:3] %}
         <li class="signal-{{ signal.tone }}">{{ signal.text }}</li>
         {% endfor %}
       </ul>
     </div>
     {% endif %}
 
-    <!-- 3. Observed Site Data -->
-    <div class="card">
-      <h2><span class="section-num">3</span>Observed Site Data</h2>
-      <dl class="observed-grid">
-        {% for field in vm.observed_fields %}
-        <dt>{{ field.label }}</dt>
-        <dd>{{ field.value }}</dd>
-        {% endfor %}
-      </dl>
-
-      <h3>Module Coverage</h3>
-      <table class="coverage-table">
-        <thead>
-          <tr>
-            <th style="width: 25%;">Module</th>
-            <th style="width: 25%;">Status</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for mc in vm.module_coverage %}
-          <tr>
-            <td>{{ mc.module_name }}</td>
-            <td>
-              {% if mc.status.value == "Confirmed from site data" %}
-              <span class="pill pill-confirmed">{{ mc.status.value }}</span>
-              {% elif mc.status.value == "Preliminary" %}
-              <span class="pill pill-preliminary">{{ mc.status.value }}</span>
-              {% elif mc.status.value == "Thin" %}
-              <span class="pill pill-thin">{{ mc.status.value }}</span>
-              {% elif mc.status.value == "Unresolved" %}
-              <span class="pill pill-unresolved">{{ mc.status.value }}</span>
-              {% elif mc.status.value == "Authority check required" %}
-              <span class="pill pill-authority">{{ mc.status.value }}</span>
-              {% endif %}
-            </td>
-            <td class="note">{{ mc.note }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE 2 — SCENARIO COMPARISON
+    ═══════════════════════════════════════════════════════════ -->
 
     <!-- 4. Scenario Comparison -->
-    <div class="card">
+    <div class="card page-break">
       <h2><span class="section-num">4</span>Scenario Comparison</h2>
       <div style="overflow-x: auto;">
         <table class="scenario-table">
@@ -304,203 +293,52 @@
               <td>{{ row.next_input_needed }}</td>
             </tr>
             {% endfor %}
+            {% if vm.ed1_screening %}
+            <tr style="background: #faf5ff;">
+              <td class="scenario-name" style="color: #7b1fa2;">ED1 (100% Affordable)</td>
+              <td>ED1 screening was run for this site</td>
+              <td><span class="pill" style="background: #f3e5f5; color: #7b1fa2;">{{ vm.ed1_screening.status_label }}</span></td>
+              <td>{{ vm.ed1_screening.summary }}</td>
+              <td>{{ vm.ed1_screening.why_this_result }}</td>
+              <td>{% if vm.ed1_screening.missing_confirmations %}{{ vm.ed1_screening.missing_confirmations | join("; ") }}{% else %}—{% endif %}</td>
+            </tr>
+            {% endif %}
           </tbody>
         </table>
       </div>
-    </div>
 
-    <!-- 5. ED1 Screening (only shown when ED1 was run) -->
-    {% if vm.ed1_screening %}
-    <div class="card ed1-card ed1-{{ vm.ed1_screening.status_tone }}">
-      <h2><span class="section-num">5</span>ED1 Screening (100% Affordable)</h2>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <span class="ed1-status-badge ed1-badge-{{ vm.ed1_screening.status_tone }}">{{ vm.ed1_screening.status_label }}</span>
-        <span style="font-size: 0.72rem; color: #888;">Confidence: {{ vm.ed1_screening.confidence_label }}</span>
-      </div>
-
-      <div style="font-size: 0.88rem; color: #444; margin-bottom: 14px;">{{ vm.ed1_screening.summary }}</div>
-
-      <!-- Why this result -->
-      <div class="ed1-section">
-        <div class="ed1-section-label">Why this result</div>
-        <div style="font-size: 0.85rem; color: #555;">{{ vm.ed1_screening.why_this_result }}</div>
-      </div>
-
-      <!-- Blockers -->
-      {% if vm.ed1_screening.blockers %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">Likely Blockers</div>
-        {% for b in vm.ed1_screening.blockers %}
-        <div class="ed1-blocker-item">{{ b }}</div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <!-- Missing confirmations -->
-      {% if vm.ed1_screening.missing_confirmations %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">Missing Confirmations</div>
-        {% for m in vm.ed1_screening.missing_confirmations %}
-        <div class="ed1-missing-item">{{ m }}</div>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <!-- Obligations -->
-      {% if vm.ed1_screening.obligations %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">Key Obligations / Constraints</div>
-        <ul class="ed1-list">
-          {% for o in vm.ed1_screening.obligations %}
+      {% if vm.ed1_screening and vm.ed1_screening.status_tone in ('eligible', 'potentially') and vm.ed1_screening.obligations %}
+      <div class="ed1-compact-note">
+        <div class="ed1-compact-note-title">ED1 Key Obligations (if applicable)</div>
+        <ul>
+          {% for o in vm.ed1_screening.obligations[:5] %}
           <li>{{ o }}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
+    </div>
 
-      <!-- Constraints summary (only when not blocked) -->
-      {% if vm.ed1_screening.constraints_summary and vm.ed1_screening.status_tone != 'ineligible' %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">ED1 Incentive / Waiver Constraints</div>
-        <ul class="ed1-list">
-          {% for c in vm.ed1_screening.constraints_summary %}
-          <li>{{ c }}</li>
+    <!-- ═══════════════════════════════════════════════════════════
+         PAGE 3 — FLAGS & NEXT INPUTS
+    ═══════════════════════════════════════════════════════════ -->
+
+    <div class="card page-break">
+      <h2>Flags &amp; Next Inputs</h2>
+
+      <!-- Comparison / next-step signals (slots 4–5 from Page 1) -->
+      {% if vm.signals|length > 3 %}
+      <div style="margin-bottom: 16px;">
+        <div class="page-label">Comparison &amp; Next-Step Signals</div>
+        <ul class="signal-list">
+          {% for signal in vm.signals[3:] %}
+          <li class="signal-{{ signal.tone }}">{{ signal.text }}</li>
           {% endfor %}
         </ul>
       </div>
       {% endif %}
 
-      <!-- Procedural benefits (only when not blocked) -->
-      {% if vm.ed1_screening.procedural_benefits and vm.ed1_screening.status_tone != 'ineligible' %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">Procedural Advantages if ED1 Applies</div>
-        <ul class="ed1-list">
-          {% for b in vm.ed1_screening.procedural_benefits %}
-          <li>{{ b }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      <!-- Baseline comparison -->
-      {% if vm.ed1_screening.baseline_comparison %}
-      <div class="ed1-section">
-        <div class="ed1-section-label">Baseline vs ED1 Comparison</div>
-        <dl class="ed1-comparison">
-          {% for key, val in vm.ed1_screening.baseline_comparison.items() %}
-          <dt>{{ key | replace("_", " ") | title }}</dt>
-          <dd>{{ val }}</dd>
-          {% endfor %}
-        </dl>
-      </div>
-      {% endif %}
-
-      <!-- Source and disclaimer -->
-      {% if vm.ed1_screening.source_basis %}
-      <div style="font-size: 0.72rem; color: #888; margin-top: 8px;">Source: {{ vm.ed1_screening.source_basis }}</div>
-      {% endif %}
-      {% if vm.ed1_screening.disclaimer %}
-      <div class="ed1-disclaimer">{{ vm.ed1_screening.disclaimer }}</div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- AB 1287 Stacking (shown when state density bonus was evaluated) -->
-    {% if vm.ab1287 %}
-    <div class="card" style="border-left: 4px solid #1565c0;">
-      <h2><span class="section-num" style="background:#1565c0;">AB</span>AB 1287 Stacking Bonus</h2>
-      <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; font-size: 0.85rem;">
-        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Eligible for stacking</dt>
-        <dd style="color: #222;">{{ "Yes" if vm.ab1287.eligible else "No" }}</dd>
-        {% if vm.ab1287.stack_bonus_pct is not none %}
-        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Stack bonus %</dt>
-        <dd style="color: #222;">{{ vm.ab1287.stack_bonus_pct | round(1) }}%</dd>
-        {% endif %}
-        {% if vm.ab1287.total_units is not none %}
-        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">AB 1287 total units</dt>
-        <dd style="color: #222;">{{ vm.ab1287.total_units }}</dd>
-        {% endif %}
-        {% if vm.ab1287.incentives_available is not none %}
-        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Incentives available</dt>
-        <dd style="color: #222;">{{ vm.ab1287.incentives_available }}</dd>
-        {% endif %}
-        {% if vm.ab1287.ineligibility_reason %}
-        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Note</dt>
-        <dd style="color: #555; font-size: 0.82rem;">{{ vm.ab1287.ineligibility_reason }}</dd>
-        {% endif %}
-      </dl>
-    </div>
-    {% endif %}
-
-    <!-- 6. Module Results -->
-    <div class="card">
-      <h2><span class="section-num">6</span>Module Results</h2>
-      {% for card in vm.module_cards %}
-      <div class="module-card">
-        <div class="module-header">
-          <span class="module-name">{{ card.module_name }}</span>
-          {% if card.status.value == "Confirmed from site data" %}
-          <span class="pill pill-confirmed">{{ card.status.value }}</span>
-          {% elif card.status.value == "Preliminary" %}
-          <span class="pill pill-preliminary">{{ card.status.value }}</span>
-          {% elif card.status.value == "Thin" %}
-          <span class="pill pill-thin">{{ card.status.value }}</span>
-          {% elif card.status.value == "Unresolved" %}
-          <span class="pill pill-unresolved">{{ card.status.value }}</span>
-          {% elif card.status.value == "Authority check required" %}
-          <span class="pill pill-authority">{{ card.status.value }}</span>
-          {% endif %}
-        </div>
-
-        <div class="module-read">{{ card.current_read }}</div>
-
-        {% if card.covers_now %}
-        <div class="module-section">
-          <div class="module-section-label">What this covers now</div>
-          <ul class="module-list">
-            {% for item in card.covers_now %}
-            <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-
-        {% if card.depends_on_inputs %}
-        <div class="module-section">
-          <div class="module-section-label">What still depends on inputs</div>
-          <ul class="module-list">
-            {% for item in card.depends_on_inputs %}
-            <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-        {% endif %}
-
-        <div class="sensitivity-bar">
-          <span class="sensitivity-label">Sensitivity:</span>
-          <span class="sensitivity-label sensitivity-{{ card.sensitivity.value }}">{{ card.sensitivity.value }}</span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- 7. Critical Caveats -->
-    {% if vm.caveats %}
-    <div class="card">
-      <h2><span class="section-num">7</span>Critical Caveats</h2>
-      {% for caveat in vm.caveats %}
-      <div class="caveat-item">
-        <div class="caveat-text">{{ caveat.text }}</div>
-        <div class="caveat-consequence">{{ caveat.consequence }}</div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- 8. Missing Inputs to Continue -->
-    <div class="card">
-      <h2><span class="section-num">8</span>Missing Inputs to Continue</h2>
+      <!-- Best Next Inputs -->
       {% if vm.best_next_inputs %}
       <div style="background: #e8f5e9; border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #c8e6c9;">
         <div style="font-size: 0.75rem; font-weight: 700; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">Best Next Inputs</div>
@@ -515,41 +353,255 @@
         {% endfor %}
       </div>
       {% endif %}
-      {% for group in vm.missing_inputs %}
-      <div class="input-group">
-        <h3>{{ group.category }}</h3>
-        {% for item in group.items %}
-        <div class="input-item">
-          <div class="input-name">{{ item.name }}</div>
-          <div class="input-why">{{ item.why_it_matters }}</div>
-          {% if item.affects_modules %}
-          <div class="input-modules">Affects: {{ item.affects_modules | join(", ") }}</div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-      {% endfor %}
-    </div>
 
-    <!-- 9. Sources / Authority Basis -->
-    <div class="card">
-      <h2><span class="section-num">9</span>Sources / Authority Basis</h2>
-      {% for src in vm.sources %}
-      <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
-        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-          <span style="font-weight: 600; font-size: 0.85rem; color: #333;">{{ src.source_type }}</span>
-        </div>
-        <div style="font-size: 0.78rem; color: #555; margin-top: 2px;">Informed: {{ src.informed }}</div>
-        <div style="font-size: 0.75rem; color: #888; margin-top: 1px;">{{ src.detail }}</div>
-        {% if src.limitation %}
-        <div style="font-size: 0.72rem; color: #b71c1c; margin-top: 2px; font-style: italic;">{{ src.limitation }}</div>
-        {% endif %}
+      <!-- 7. Critical Caveats -->
+      {% if vm.caveats %}
+      <div class="page-label" style="margin-top: 8px;">Critical Caveats</div>
+      {% for caveat in vm.caveats %}
+      <div class="caveat-item">
+        <div class="caveat-text">{{ caveat.text }}</div>
+        <div class="caveat-consequence">{{ caveat.consequence }}</div>
       </div>
       {% endfor %}
-      {% if not vm.sources %}
-      <div style="font-size: 0.85rem; color: #666; font-style: italic;">No source provenance recorded for this run.</div>
       {% endif %}
     </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         APPENDIX — Detailed Results
+    ═══════════════════════════════════════════════════════════ -->
+
+    <details class="appendix-details">
+      <summary>
+        <span class="appendix-title">Detailed Results &amp; Appendix</span>
+        <span style="font-size: 0.72rem; color: #888; font-weight: 400;">Observed data · Module results · ED1 detail · Sources · Missing inputs</span>
+      </summary>
+      <div class="appendix-inner">
+
+        <!-- 3. Observed Site Data -->
+        <div class="card">
+          <h2><span class="section-num">3</span>Observed Site Data</h2>
+          <dl class="observed-grid">
+            {% for field in vm.observed_fields %}
+            <dt>{{ field.label }}</dt>
+            <dd>{{ field.value }}</dd>
+            {% endfor %}
+          </dl>
+
+          <h3>Module Coverage</h3>
+          <table class="coverage-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Module</th>
+                <th style="width: 25%;">Status</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mc in vm.module_coverage %}
+              <tr>
+                <td>{{ mc.module_name }}</td>
+                <td>
+                  {% if mc.status.value == "Confirmed from site data" %}
+                  <span class="pill pill-confirmed">{{ mc.status.value }}</span>
+                  {% elif mc.status.value == "Preliminary" %}
+                  <span class="pill pill-preliminary">{{ mc.status.value }}</span>
+                  {% elif mc.status.value == "Thin" %}
+                  <span class="pill pill-thin">{{ mc.status.value }}</span>
+                  {% elif mc.status.value == "Unresolved" %}
+                  <span class="pill pill-unresolved">{{ mc.status.value }}</span>
+                  {% elif mc.status.value == "Authority check required" %}
+                  <span class="pill pill-authority">{{ mc.status.value }}</span>
+                  {% endif %}
+                </td>
+                <td class="note">{{ mc.note }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 5. ED1 Screening (full detail — only shown when ED1 was run) -->
+        {% if vm.ed1_screening %}
+        <div class="card ed1-card ed1-{{ vm.ed1_screening.status_tone }}">
+          <h2><span class="section-num">5</span>ED1 Screening — Full Detail (100% Affordable)</h2>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span class="ed1-status-badge ed1-badge-{{ vm.ed1_screening.status_tone }}">{{ vm.ed1_screening.status_label }}</span>
+            <span style="font-size: 0.72rem; color: #888;">Confidence: {{ vm.ed1_screening.confidence_label }}</span>
+          </div>
+
+          <div style="font-size: 0.88rem; color: #444; margin-bottom: 14px;">{{ vm.ed1_screening.summary }}</div>
+
+          <div class="ed1-section">
+            <div class="ed1-section-label">Why this result</div>
+            <div style="font-size: 0.85rem; color: #555;">{{ vm.ed1_screening.why_this_result }}</div>
+          </div>
+
+          {% if vm.ed1_screening.blockers %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">Likely Blockers</div>
+            {% for b in vm.ed1_screening.blockers %}
+            <div class="ed1-blocker-item">{{ b }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.missing_confirmations %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">Missing Confirmations</div>
+            {% for m in vm.ed1_screening.missing_confirmations %}
+            <div class="ed1-missing-item">{{ m }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.obligations %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">Key Obligations / Constraints</div>
+            <ul class="ed1-list">
+              {% for o in vm.ed1_screening.obligations %}
+              <li>{{ o }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.constraints_summary and vm.ed1_screening.status_tone != 'ineligible' %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">ED1 Incentive / Waiver Constraints</div>
+            <ul class="ed1-list">
+              {% for c in vm.ed1_screening.constraints_summary %}
+              <li>{{ c }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.procedural_benefits and vm.ed1_screening.status_tone != 'ineligible' %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">Procedural Advantages if ED1 Applies</div>
+            <ul class="ed1-list">
+              {% for b in vm.ed1_screening.procedural_benefits %}
+              <li>{{ b }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.baseline_comparison %}
+          <div class="ed1-section">
+            <div class="ed1-section-label">Baseline vs ED1 Comparison</div>
+            <dl class="ed1-comparison">
+              {% for key, val in vm.ed1_screening.baseline_comparison.items() %}
+              <dt>{{ key | replace("_", " ") | title }}</dt>
+              <dd>{{ val }}</dd>
+              {% endfor %}
+            </dl>
+          </div>
+          {% endif %}
+
+          {% if vm.ed1_screening.source_basis %}
+          <div style="font-size: 0.72rem; color: #888; margin-top: 8px;">Source: {{ vm.ed1_screening.source_basis }}</div>
+          {% endif %}
+          {% if vm.ed1_screening.disclaimer %}
+          <div class="ed1-disclaimer">{{ vm.ed1_screening.disclaimer }}</div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- 6. Module Results -->
+        <div class="card">
+          <h2><span class="section-num">6</span>Module Results</h2>
+          {% for card in vm.module_cards %}
+          <div class="module-card">
+            <div class="module-header">
+              <span class="module-name">{{ card.module_name }}</span>
+              {% if card.status.value == "Confirmed from site data" %}
+              <span class="pill pill-confirmed">{{ card.status.value }}</span>
+              {% elif card.status.value == "Preliminary" %}
+              <span class="pill pill-preliminary">{{ card.status.value }}</span>
+              {% elif card.status.value == "Thin" %}
+              <span class="pill pill-thin">{{ card.status.value }}</span>
+              {% elif card.status.value == "Unresolved" %}
+              <span class="pill pill-unresolved">{{ card.status.value }}</span>
+              {% elif card.status.value == "Authority check required" %}
+              <span class="pill pill-authority">{{ card.status.value }}</span>
+              {% endif %}
+            </div>
+
+            <div class="module-read">{{ card.current_read }}</div>
+
+            {% if card.covers_now %}
+            <div class="module-section">
+              <div class="module-section-label">What this covers now</div>
+              <ul class="module-list">
+                {% for item in card.covers_now %}
+                <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            {% if card.depends_on_inputs %}
+            <div class="module-section">
+              <div class="module-section-label">What still depends on inputs</div>
+              <ul class="module-list">
+                {% for item in card.depends_on_inputs %}
+                <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            <div class="sensitivity-bar">
+              <span class="sensitivity-label">Sensitivity:</span>
+              <span class="sensitivity-label sensitivity-{{ card.sensitivity.value }}">{{ card.sensitivity.value }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- 8. Missing Inputs (static groups — full list) -->
+        <div class="card">
+          <h2><span class="section-num">8</span>Missing Inputs — Full List</h2>
+          {% for group in vm.missing_inputs %}
+          <div class="input-group">
+            <h3>{{ group.category }}</h3>
+            {% for item in group.items %}
+            <div class="input-item">
+              <div class="input-name">{{ item.name }}</div>
+              <div class="input-why">{{ item.why_it_matters }}</div>
+              {% if item.affects_modules %}
+              <div class="input-modules">Affects: {{ item.affects_modules | join(", ") }}</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- 9. Sources / Authority Basis -->
+        <div class="card">
+          <h2><span class="section-num">9</span>Sources / Authority Basis</h2>
+          {% for src in vm.sources %}
+          <div style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span style="font-weight: 600; font-size: 0.85rem; color: #333;">{{ src.source_type }}</span>
+            </div>
+            <div style="font-size: 0.78rem; color: #555; margin-top: 2px;">Informed: {{ src.informed }}</div>
+            <div style="font-size: 0.75rem; color: #888; margin-top: 1px;">{{ src.detail }}</div>
+            {% if src.limitation %}
+            <div style="font-size: 0.72rem; color: #b71c1c; margin-top: 2px; font-style: italic;">{{ src.limitation }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% if not vm.sources %}
+          <div style="font-size: 0.85rem; color: #666; font-style: italic;">No source provenance recorded for this run.</div>
+          {% endif %}
+        </div>
+
+      </div>
+    </details>
 
     <p class="disclaimer">
       Address-only preliminary screening. Not for final code determination without project inputs and professional review.<br>
