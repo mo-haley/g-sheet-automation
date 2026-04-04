@@ -192,6 +192,14 @@ def run_analysis():
     project_id = hashlib.md5(f"{address}-{id(project)}".encode()).hexdigest()[:12]
     app_result = run_app(site, project, project_id=project_id)
 
+    # Cache results for Excel export
+    _results_cache[project_id] = {
+        "address": address,
+        "site": site,
+        "project": project,
+        "app_result": app_result,
+    }
+
     # Build view model with project context
     vm = build_snapshot_view(
         site, app_result,
@@ -208,6 +216,7 @@ def run_analysis():
     return render_template(
         "snapshot.html",
         vm=vm,
+        run_id=project_id,
         tool_version=TOOL_VERSION,
         code_cycle=CODE_CYCLE,
         debug_trace=debug_trace,
@@ -322,24 +331,38 @@ def export_excel(run_id):
     if not cached:
         return redirect(url_for("index"))
 
+    site = cached["site"]
+    project = cached["project"]
+    app_result = cached["app_result"]
     address = cached["address"]
+
+    # Check if the parking module used a default unit mix assumption
+    parking_default_mix = False
+    parking_mr = next(
+        (mr for mr in app_result.module_results if mr.module == "parking"), None
+    )
+    if parking_mr:
+        baseline = parking_mr.module_payload.get("full_output", {}).get("baseline_parking", {})
+        parking_default_mix = bool(baseline.get("used_default_unit_mix_assumption", False))
+
     safe_name = "".join(c if c.isalnum() or c in " -_" else "_" for c in address)[:60]
     tmp_dir = Path(tempfile.mkdtemp())
     excel_path = tmp_dir / f"{safe_name}.xlsx"
 
     generate_workbook(
-        site=cached["site"],
-        project=cached["project"],
-        area_results=cached["area_results"],
-        density_results=cached["density_results"],
-        far_results=cached["far_results"],
-        height_results=cached["height_results"],
-        parking_results=cached["parking_results"],
-        open_space_results=cached["os_results"],
-        loading_results=cached["load_results"],
-        scenarios=cached["scenarios"],
-        issues=cached["all_issues"],
+        site=site,
+        project=project,
+        area_results=[],
+        density_results=[],
+        far_results=[],
+        height_results=[],
+        parking_results=[],
+        open_space_results=[],
+        loading_results=[],
+        scenarios=[],
+        issues=[],
         output_path=excel_path,
+        parking_used_default_unit_mix=parking_default_mix,
     )
 
     return send_file(

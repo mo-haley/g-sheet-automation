@@ -179,6 +179,9 @@
     <div class="actions">
       <a href="/" class="btn btn-outline">New Analysis</a>
       <button onclick="window.print()" class="btn btn-outline">Print / PDF</button>
+      {% if run_id %}
+      <a href="/export/{{ run_id }}" class="btn btn-primary">Download Excel</a>
+      {% endif %}
     </div>
 
     {% if vm.project_summary %}
@@ -400,6 +403,33 @@
       {% if vm.ed1_screening.disclaimer %}
       <div class="ed1-disclaimer">{{ vm.ed1_screening.disclaimer }}</div>
       {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- AB 1287 Stacking (shown when state density bonus was evaluated) -->
+    {% if vm.ab1287 %}
+    <div class="card" style="border-left: 4px solid #1565c0;">
+      <h2><span class="section-num" style="background:#1565c0;">AB</span>AB 1287 Stacking Bonus</h2>
+      <dl style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; font-size: 0.85rem;">
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Eligible for stacking</dt>
+        <dd style="color: #222;">{{ "Yes" if vm.ab1287.eligible else "No" }}</dd>
+        {% if vm.ab1287.stack_bonus_pct is not none %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Stack bonus %</dt>
+        <dd style="color: #222;">{{ vm.ab1287.stack_bonus_pct | round(1) }}%</dd>
+        {% endif %}
+        {% if vm.ab1287.total_units is not none %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">AB 1287 total units</dt>
+        <dd style="color: #222;">{{ vm.ab1287.total_units }}</dd>
+        {% endif %}
+        {% if vm.ab1287.incentives_available is not none %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Incentives available</dt>
+        <dd style="color: #222;">{{ vm.ab1287.incentives_available }}</dd>
+        {% endif %}
+        {% if vm.ab1287.ineligibility_reason %}
+        <dt style="font-size: 0.72rem; color: #888; font-weight: 600; text-transform: uppercase;">Note</dt>
+        <dd style="color: #555; font-size: 0.82rem;">{{ vm.ab1287.ineligibility_reason }}</dd>
+        {% endif %}
+      </dl>
     </div>
     {% endif %}
 

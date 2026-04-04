@@ -30,7 +30,7 @@ from models.result_common import AppResult
 from models.site import Site
 from models.project import Project
 from calc.far import calculate_far_module
-from density.density_orchestrator import derive_development_posture, run_density_module
+from density.density_orchestrator import run_density_module
 from ed1.models import ED1Input
 from ed1.ed1_orchestrator import run_ed1_module
 from parking.parking_orchestrator import run_parking_module
@@ -114,11 +114,9 @@ def run_app(
     if zimas_input is None:
         zimas_input = build_zimas_input_from_site(site)
 
-    # Auto-derive run_ed1 from project posture. Market-rate projects have no
-    # affordability commitment, so ED1 (100% affordable pathway) cannot apply.
+    # ED1 requires 100% affordable. Only run when the checkbox is explicitly set.
     if run_ed1:
-        posture = derive_development_posture(project, override=density_posture)
-        if posture == "market_rate":
+        if project.hundred_pct_affordable is not True:
             run_ed1 = False
 
     zimas_result = run_zimas_linked_doc_module(zimas_input)
