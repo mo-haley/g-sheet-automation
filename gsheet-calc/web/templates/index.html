@@ -176,6 +176,15 @@
       <div class="card">
         <h2>Entitlement / Policy Path</h2>
         <p class="section-note">Select the incentive program to test. Base zoning results are always included for comparison.</p>
+
+        <!-- 100% Affordable gate -->
+        <div class="form-row single" style="margin-bottom: 14px;">
+          <div class="form-group checkbox-group" id="hundredPctAffordableGroup">
+            <input type="checkbox" id="hundred_pct_affordable" name="hundred_pct_affordable" {{ 'checked' if request.form.get('hundred_pct_affordable') }}>
+            <label for="hundred_pct_affordable" style="font-size: 0.88rem; font-weight: 700;">100% Affordable Project</label>
+            <span class="hint" style="margin-left: 4px;">Check if all units (excluding manager's unit) are restricted affordable. Activates Track B density bonus and AB 1287 calculations.</span>
+          </div>
+        </div>
         <div class="policy-options">
           <div class="policy-option">
             <input type="radio" id="path_base" name="policy_path" value="base_zoning" {{ 'checked' if not request.form.get('policy_path') or request.form.get('policy_path') == 'base_zoning' }}>
@@ -470,11 +479,30 @@
       });
     });
 
+    // 5. 100% Affordable checkbox — visual Track B indicator
+    function updateHundredPctAffordable() {
+      var cb = document.getElementById('hundred_pct_affordable');
+      var group = document.getElementById('hundredPctAffordableGroup');
+      if (cb.checked) {
+        group.style.background = '#e8f0fe';
+        group.style.borderRadius = '4px';
+        group.style.padding = '8px 10px';
+        group.style.outline = '1px solid #2F5496';
+      } else {
+        group.style.background = '';
+        group.style.borderRadius = '';
+        group.style.padding = '';
+        group.style.outline = '';
+      }
+    }
+    document.getElementById('hundred_pct_affordable').addEventListener('change', updateHundredPctAffordable);
+
     // Init all conditional visibility on load
     updateCommercialVisibility();
     updateAlleyVisibility();
     updateAffordabilityVisibility();
     updatePolicyAdvancedVisibility();
+    updateHundredPctAffordable();
   </script>
 </body>
 </html>

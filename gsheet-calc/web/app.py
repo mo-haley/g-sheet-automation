@@ -98,6 +98,8 @@ def _build_project_from_form(form) -> Project:
     parking_strategy = form.get("parking_strategy", "none")
     parking_subterranean = parking_strategy == "subterranean"
 
+    hundred_pct_affordable = True if form.get("hundred_pct_affordable") else False
+
     return Project(
         project_name=form.get("project_name") or f"Web Analysis: {form.get('address', '')}",
         application_date=form.get("application_date", ""),
@@ -115,6 +117,7 @@ def _build_project_from_form(form) -> Project:
         affordability=affordability,
         prevailing_wage_committed=True if form.get("prevailing_wage") == "true" else None,
         commercial_corridor_frontage=True if form.get("commercial_corridor") == "true" else None,
+        hundred_pct_affordable=hundred_pct_affordable,
     )
 
 
