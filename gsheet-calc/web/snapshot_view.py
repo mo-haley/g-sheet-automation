@@ -609,22 +609,22 @@ def _build_scenarios(site: Site, app: AppResult) -> list[ScenarioRow]:
         ) if candidates else False
         if has_state_db:
             if state_db_unlimited:
+                # 100% affordable project — no numerical cap under §65915(f)(1)
                 state_db_effect = "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
             elif state_db_units is not None and base_units is not None:
                 diff = state_db_units - base_units
                 state_db_effect = (
                     f"Baseline: {base_units} units → State DB: {state_db_units} units (+{diff}). "
-                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                    "May increase allowable density above base zoning based on affordability commitment."
                 )
             elif state_db_units is not None:
                 state_db_effect = (
                     f"State Density Bonus path: {state_db_units} units possible. "
-                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                    "May increase allowable density above base zoning based on affordability commitment."
                 )
             else:
                 state_db_effect = (
-                    "May increase allowable density above base zoning. "
-                    "No numerical limit on density for 100% affordable projects (Gov. Code §65915(f)(1))"
+                    "May increase allowable density above base zoning based on affordability commitment."
                 )
             rows.append(ScenarioRow(
                 scenario="State Density Bonus Law (Gov. Code §65915)",
@@ -639,14 +639,41 @@ def _build_scenarios(site: Site, app: AppResult) -> list[ScenarioRow]:
             # Use computed data from decision-grade mode if available; otherwise show screening text.
             state_db_payload = (density.module_payload.get("full_output") or {}).get("state_db_density")
             if state_db_payload:
-                ab1287_units = state_db_payload.get("ab1287_total_units")
+                ab1287_eligible = state_db_payload.get("ab1287_eligible", False)
+                ab1287_total_units = state_db_payload.get("ab1287_total_units")
+                ab1287_stack_units = state_db_payload.get("ab1287_stack_units")
                 ab1287_pct = state_db_payload.get("ab1287_stack_bonus_pct")
-                if ab1287_units is not None:
-                    ab_effect = f"AB 1287 stacking: {ab1287_units} total units"
+                ab1287_incentives = state_db_payload.get("ab1287_incentives_available")
+                ineligibility_reason = state_db_payload.get("ineligibility_reason")
+
+                if not ab1287_eligible:
+                    reason = ineligibility_reason or "project does not meet threshold affordability"
+                    ab_effect = f"AB 1287 stacking not available — {reason}"
+                elif ab1287_total_units is not None:
+                    parts = []
                     if ab1287_pct:
-                        ab_effect += f" ({ab1287_pct:.1f}% additional bonus)"
+                        pct_str = f"+{ab1287_pct:.1f}%"
+                        if ab1287_stack_units is not None:
+                            parts.append(
+                                f"AB 1287 stackable: {pct_str} additional density "
+                                f"({ab1287_stack_units} additional units)."
+                            )
+                        else:
+                            parts.append(f"AB 1287 stackable: {pct_str} additional density.")
+                    parts.append(f"Total with stacking: {ab1287_total_units} units.")
+                    if ab1287_incentives is not None:
+                        parts.append(f"{ab1287_incentives} incentive(s) available.")
+                    ab_effect = " ".join(parts)
+                elif ab1287_pct:
+                    ab_effect = (
+                        f"AB 1287 stackable: +{ab1287_pct:.1f}% additional density available. "
+                        "Enter unit count for unit calculation."
+                    )
                 else:
-                    ab_effect = "Additional 20-50% density bonus may stack on top of primary State DB bonus for projects meeting threshold affordability"
+                    ab_effect = (
+                        "AB 1287 stacking eligible; enter unit count and affordability details "
+                        "for unit calculation."
+                    )
             else:
                 ab_effect = "Additional 20-50% density bonus may stack on top of primary State DB bonus for projects meeting threshold affordability"
             rows.append(ScenarioRow(
@@ -792,7 +819,8 @@ def _build_module_cards(app: AppResult) -> list[ModuleCard]:
                 covers.append("Parking code family and transit-reduction eligibility")
             if not depends:
                 depends.append("Unit mix, bedroom count, commercial area, affordable status")
-                parking_provisional = True
+            # Provisional whenever unit mix isn't confirmed (status != CONFIRMED)
+            parking_provisional = (status != ModuleStatus.CONFIRMED)
 
         elif mr.module == "setback":
             has_edges = bool(mr.module_payload.get("edges"))
@@ -868,9 +896,33 @@ def _build_caveats(
         ))
 
     if not has_policy and not has_affordability:
+        # Tailor consequence to which lanes are actually candidate routes for this site
+        has_toc = bool(site.toc_tier)
+        has_state_db_candidate = False
+        if density:
+            _candidates = density.module_payload.get("candidate_routes") or []
+            has_state_db_candidate = any(
+                isinstance(c, dict) and c.get("lane") == "state_db"
+                for c in _candidates
+            )
+        if has_toc and has_state_db_candidate:
+            _consequence = (
+                "TOC and State Density Bonus comparisons are indicative only — "
+                "affordability commitment not entered"
+            )
+        elif has_state_db_candidate:
+            _consequence = (
+                "State Density Bonus comparison unavailable — no affordability strategy entered"
+            )
+        elif has_toc:
+            _consequence = (
+                "TOC scenario comparison is indicative only — affordability commitment not entered"
+            )
+        else:
+            _consequence = "Scenario comparisons are indicative only — no incentive path selected"
         caveats.append(Caveat(
             text="Affordability/incentive path not selected",
-            consequence="Scenario comparisons are indicative only; Transit-area and State Density Bonus paths not confirmed",
+            consequence=_consequence,
         ))
 
     if site.specific_plan or site.overlay_zones:
