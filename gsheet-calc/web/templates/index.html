@@ -164,16 +164,42 @@
       <div class="card">
         <h2>Entitlement / Policy Path</h2>
 
-        <!-- 100% Affordable gate -->
-        <div class="form-row single" style="margin-bottom: 14px;">
-          <div class="form-group checkbox-group" id="hundredPctAffordableGroup">
-            <input type="checkbox" id="hundred_pct_affordable" name="hundred_pct_affordable" {{ 'checked' if request.form.get('hundred_pct_affordable') }}>
-            <label for="hundred_pct_affordable" style="font-size: 0.88rem; font-weight: 700;">100% Affordable Project</label>
-            <span class="hint" style="margin-left: 4px;">Check if all units (excluding manager's unit) are restricted affordable. Activates Track B density bonus and AB 1287 calculations.</span>
+        <!-- Path selector (3 radio buttons) -->
+        <div class="form-row single" style="margin-bottom: 10px;">
+          <div class="form-group">
+            <label style="margin-bottom: 6px;">Entitlement Path</label>
+            <div class="parking-options">
+              <div class="parking-option">
+                <input type="radio" id="path_base" name="selected_path" value="base_zoning"
+                  {{ 'checked' if not request.form.get('selected_path') or request.form.get('selected_path') == 'base_zoning' }}>
+                <label for="path_base">Base Zoning</label>
+              </div>
+              <div class="parking-option">
+                <input type="radio" id="path_db" name="selected_path" value="density_bonus"
+                  {{ 'checked' if request.form.get('selected_path') == 'density_bonus' }}>
+                <label for="path_db">Density Bonus</label>
+              </div>
+              <div class="parking-option">
+                <input type="radio" id="path_100" name="selected_path" value="affordable_100"
+                  {{ 'checked' if request.form.get('selected_path') == 'affordable_100' }}>
+                <label for="path_100">100% Affordable</label>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Affordability inputs -->
+        <!-- 100% Affordable gate (shown when path = affordable_100) -->
+        <div class="conditional-section" id="hundredPctSection">
+          <div class="form-row single">
+            <div class="form-group checkbox-group" id="hundredPctAffordableGroup">
+              <input type="checkbox" id="hundred_pct_affordable" name="hundred_pct_affordable" {{ 'checked' if request.form.get('hundred_pct_affordable') }}>
+              <label for="hundred_pct_affordable" style="font-size: 0.88rem; font-weight: 700;">Confirm: All units restricted affordable (excl. manager's unit)</label>
+              <span class="hint" style="margin-left: 4px;">Activates Track B density bonus and ED1 screening.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Density Bonus affordability inputs (shown when path = density_bonus or affordable_100) -->
         <div class="affordability-inputs" id="affordabilityInputs">
           <p class="section-note">Affordability mix (% of total units)</p>
           <div class="form-row quad">
@@ -193,6 +219,77 @@
               <label for="moderate_pct">Moderate %</label>
               <input type="number" id="moderate_pct" name="moderate_pct" min="0" max="100" step="0.1" value="{{ request.form.get('moderate_pct', '0') }}">
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- G-Sheet Project Metadata -->
+      <div class="card">
+        <h2>G-Sheet Metadata</h2>
+        <p class="section-note">For the G010 print sheet header. Leave blank to omit.</p>
+        <div class="form-row triple">
+          <div class="form-group">
+            <label for="firm_name">Firm Name</label>
+            <input type="text" id="firm_name" name="firm_name" placeholder="e.g. KFA Architecture" value="{{ request.form.get('firm_name', '') }}">
+          </div>
+          <div class="form-group">
+            <label for="project_number">Project Number</label>
+            <input type="text" id="project_number" name="project_number" placeholder="e.g. 2025-042" value="{{ request.form.get('project_number', '') }}">
+          </div>
+          <div class="form-group">
+            <label for="issue_date">Issue Date</label>
+            <input type="date" id="issue_date" name="issue_date" value="{{ request.form.get('issue_date', '') }}">
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="entitlements_text">Entitlements (optional)</label>
+            <textarea id="entitlements_text" name="entitlements_text" rows="2" style="padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88rem; resize: vertical; font-family: inherit;" placeholder="e.g. TOC Tier 3 Density Bonus, AB 2097 parking waiver">{{ request.form.get('entitlements_text', '') }}</textarea>
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label for="legal_description">Legal Description (optional)</label>
+            <textarea id="legal_description" name="legal_description" rows="2" style="padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.88rem; resize: vertical; font-family: inherit;" placeholder="e.g. Lots 1–3 of Tract 12345, per map recorded in Book 99...">{{ request.form.get('legal_description', '') }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Provided Quantities -->
+      <div class="card">
+        <h2>Provided Quantities</h2>
+        <p class="section-note">Enter architect-proposed values for compliance checking. Leave blank to show "Not entered" on the G-Sheet.</p>
+
+        <div class="form-row triple">
+          <div class="form-group">
+            <label for="open_space_provided_sf">Open Space Provided (sf)</label>
+            <input type="number" id="open_space_provided_sf" name="open_space_provided_sf" min="0" step="1" value="{{ request.form.get('open_space_provided_sf', '') }}" placeholder="Leave blank if unknown">
+          </div>
+          <div class="form-group">
+            <label for="parking_auto_provided">Auto Parking Provided</label>
+            <input type="number" id="parking_auto_provided" name="parking_auto_provided" min="0" step="1" value="{{ request.form.get('parking_auto_provided', '') }}" placeholder="Spaces">
+          </div>
+          <div class="form-group">
+            <label for="parking_accessible_provided">Accessible Parking Provided</label>
+            <input type="number" id="parking_accessible_provided" name="parking_accessible_provided" min="0" step="1" value="{{ request.form.get('parking_accessible_provided', '') }}" placeholder="Spaces">
+          </div>
+        </div>
+        <div class="form-row quad">
+          <div class="form-group">
+            <label for="bike_long_term_provided">Bike Long-Term</label>
+            <input type="number" id="bike_long_term_provided" name="bike_long_term_provided" min="0" step="1" value="{{ request.form.get('bike_long_term_provided', '') }}" placeholder="Spaces">
+          </div>
+          <div class="form-group">
+            <label for="bike_short_term_provided">Bike Short-Term</label>
+            <input type="number" id="bike_short_term_provided" name="bike_short_term_provided" min="0" step="1" value="{{ request.form.get('bike_short_term_provided', '') }}" placeholder="Spaces">
+          </div>
+          <div class="form-group">
+            <label for="ev_receptacles_provided">EV Receptacles</label>
+            <input type="number" id="ev_receptacles_provided" name="ev_receptacles_provided" min="0" step="1" value="{{ request.form.get('ev_receptacles_provided', '') }}" placeholder="Count">
+          </div>
+          <div class="form-group">
+            <label for="ev_evse_provided">EV EVSE (Level 2)</label>
+            <input type="number" id="ev_evse_provided" name="ev_evse_provided" min="0" step="1" value="{{ request.form.get('ev_evse_provided', '') }}" placeholder="Count">
           </div>
         </div>
       </div>
@@ -314,6 +411,13 @@
           <span class="spinner">Analyzing... (geocoding + ZIMAS query may take a few seconds)</span>
         </button>
         <div style="margin-top: 12px;">
+          <button type="submit" formaction="/gsheet" class="submit-btn" id="gsheetBtn" style="background: #1a3d1a; color: #fff; border: none; padding: 14px 40px;">
+            <span class="btn-text">Generate G-Sheet</span>
+            <span class="spinner">Generating... (geocoding + ZIMAS query may take a few seconds)</span>
+          </button>
+          <div style="font-size: 0.72rem; color: #888; margin-top: 4px;">Print-ready G010 Project Information sheet. Requires project inputs above.</div>
+        </div>
+        <div style="margin-top: 12px;">
           <button type="submit" formaction="/run-address" class="submit-btn" id="addressOnlyBtn" style="background: #fff; color: #2F5496; border: 1px solid #2F5496; padding: 10px 32px; font-size: 0.88rem;">
             <span class="btn-text">Address-Only Screening</span>
             <span class="spinner">Screening... (geocoding + ZIMAS query may take a few seconds)</span>
@@ -400,28 +504,37 @@
     }
     document.getElementById('alley_adjacent').addEventListener('change', updateAlleyVisibility);
 
-    // 3. 100% Affordable checkbox — visual Track B indicator
-    function updateHundredPctAffordable() {
+    // 3. Entitlement path selector — show/hide affordability + 100% affordable sections
+    function updatePathVisibility() {
+      var path = document.querySelector('input[name="selected_path"]:checked');
+      var selectedVal = path ? path.value : 'base_zoning';
+
+      var affInputs = document.getElementById('affordabilityInputs');
+      var hundredSection = document.getElementById('hundredPctSection');
+
+      // Show affordability % fields for density_bonus and affordable_100
+      var showAff = (selectedVal === 'density_bonus' || selectedVal === 'affordable_100');
+      affInputs.style.display = showAff ? '' : 'none';
+
+      // Show 100% affordable confirmation only for affordable_100
+      var show100 = (selectedVal === 'affordable_100');
+      setVisible(hundredSection, show100);
+
+      // Auto-check the hundred_pct_affordable box when path = affordable_100
       var cb = document.getElementById('hundred_pct_affordable');
-      var group = document.getElementById('hundredPctAffordableGroup');
-      if (cb.checked) {
-        group.style.background = '#e8f0fe';
-        group.style.borderRadius = '4px';
-        group.style.padding = '8px 10px';
-        group.style.outline = '1px solid #2F5496';
-      } else {
-        group.style.background = '';
-        group.style.borderRadius = '';
-        group.style.padding = '';
-        group.style.outline = '';
+      if (show100) {
+        cb.checked = true;
       }
     }
-    document.getElementById('hundred_pct_affordable').addEventListener('change', updateHundredPctAffordable);
+
+    document.querySelectorAll('input[name="selected_path"]').forEach(function(r) {
+      r.addEventListener('change', updatePathVisibility);
+    });
 
     // Init all conditional visibility on load
     updateCommercialVisibility();
     updateAlleyVisibility();
-    updateHundredPctAffordable();
+    updatePathVisibility();
   </script>
 </body>
 </html>

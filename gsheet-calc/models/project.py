@@ -55,6 +55,22 @@ class Project(BaseModel):
     project_number: str = ""
     application_date: str = ""
 
+    # G-Sheet metadata
+    selected_path: str | None = None  # EntitlementPath value
+    firm_name: str = ""
+    issue_date: str = ""
+    entitlements_text: str = ""
+    legal_description: str = ""
+
+    # Provided quantities (architect-supplied)
+    open_space_provided_sf: float | None = None
+    parking_auto_provided: int | None = None
+    parking_accessible_provided: int | None = None
+    bike_long_term_provided: int | None = None
+    bike_short_term_provided: int | None = None
+    ev_receptacles_provided: int | None = None
+    ev_evse_provided: int | None = None
+
     # Site modifications
     dedication_street_ft: float = 0.0
     dedication_alley_ft: float = 0.0

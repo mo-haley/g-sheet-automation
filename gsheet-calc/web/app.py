@@ -21,6 +21,7 @@ from ingest.zimas import ZIMASClient
 from models.issue import ReviewIssue
 from models.project import AffordabilityPlan, OccupancyArea, Project, UnitType
 from output.excel import generate_workbook
+from output.gsheet_viewmodel import build_g010_viewmodel
 from web.snapshot_view import build_snapshot_view
 
 TOOL_VERSION = "1.1.0-demo"
@@ -100,9 +101,27 @@ def _build_project_from_form(form) -> Project:
 
     hundred_pct_affordable = True if form.get("hundred_pct_affordable") else False
 
+    # Entitlement path (radio: base_zoning / density_bonus / affordable_100)
+    selected_path = form.get("selected_path") or None
+
     return Project(
         project_name=form.get("project_name") or f"Web Analysis: {form.get('address', '')}",
+        project_number=form.get("project_number", ""),
         application_date=form.get("application_date", ""),
+        # G-Sheet metadata
+        selected_path=selected_path,
+        firm_name=form.get("firm_name", ""),
+        issue_date=form.get("issue_date", ""),
+        entitlements_text=form.get("entitlements_text", ""),
+        legal_description=form.get("legal_description", ""),
+        # Provided quantities
+        open_space_provided_sf=_float_or(form.get("open_space_provided_sf")) or None,
+        parking_auto_provided=_int_or_none(form.get("parking_auto_provided")),
+        parking_accessible_provided=_int_or_none(form.get("parking_accessible_provided")),
+        bike_long_term_provided=_int_or_none(form.get("bike_long_term_provided")),
+        bike_short_term_provided=_int_or_none(form.get("bike_short_term_provided")),
+        ev_receptacles_provided=_int_or_none(form.get("ev_receptacles_provided")),
+        ev_evse_provided=_int_or_none(form.get("ev_evse_provided")),
         total_units=total_units,
         unit_mix=unit_mix,
         occupancy_areas=occupancy_areas,
@@ -205,6 +224,70 @@ def run_analysis():
         tool_version=TOOL_VERSION,
         code_cycle=CODE_CYCLE,
         debug_trace=debug_trace,
+    )
+
+
+@app.route("/gsheet", methods=["POST"])
+def run_gsheet():
+    """G010 Project Information sheet — print-ready architectural data sheet.
+
+    Runs the same pipeline as /run but renders the G010 HTML template
+    instead of the feasibility snapshot.
+    """
+    address = request.form.get("address", "").strip()
+    if not address:
+        return render_template("index.html", error="Address is required.")
+
+    try:
+        project = _build_project_from_form(request.form)
+    except Exception as e:
+        return render_template("index.html", error=f"Invalid project inputs: {e}")
+
+    # Geocode
+    try:
+        geocoder = Geocoder()
+        coords = geocoder.geocode(address)
+    except Exception as e:
+        return render_template("index.html", error=f"Geocoding failed: {e}")
+
+    if coords is None:
+        return render_template("index.html", error=f"Could not geocode address: '{address}'.")
+
+    # ZIMAS
+    try:
+        zimas = ZIMASClient()
+        identify_data = zimas.identify(coords[0], coords[1])
+        site, zoning_parse, ingest_issues = parse_zimas_response(
+            address, identify_data, coordinates=coords, pull_timestamp=zimas.pull_timestamp
+        )
+    except Exception as e:
+        return render_template("index.html", error=f"ZIMAS query failed: {e}")
+
+    # Lot area override
+    lot_area_override = _float_or(request.form.get("lot_area_override")) or None
+    if lot_area_override:
+        site.survey_lot_area_sf = lot_area_override
+        site.lot_area_sf = lot_area_override
+
+    project_id = hashlib.md5(f"gsheet-{address}-{id(project)}".encode()).hexdigest()[:12]
+    app_result = run_app(site, project, project_id=project_id)
+
+    # Cache for potential Excel export
+    _results_cache[project_id] = {
+        "address": address,
+        "site": site,
+        "project": project,
+        "app_result": app_result,
+    }
+
+    vm = build_g010_viewmodel(site, project, app_result)
+
+    return render_template(
+        "gsheet.html",
+        vm=vm,
+        run_id=project_id,
+        tool_version=TOOL_VERSION,
+        code_cycle=CODE_CYCLE,
     )
 
 

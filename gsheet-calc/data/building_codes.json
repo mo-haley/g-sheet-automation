@@ -1,0 +1,13 @@
+{
+  "codes": [
+    {"code": "CBC", "year": 2022, "full_name": "California Building Code", "scope": "Building"},
+    {"code": "LABC", "year": 2022, "full_name": "Los Angeles Building Code", "scope": "Building (local amendments)"},
+    {"code": "LAMC", "year": 2025, "full_name": "Los Angeles Municipal Code", "scope": "Zoning, land use, parking"},
+    {"code": "CALGreen", "year": 2022, "full_name": "California Green Building Standards Code", "scope": "Sustainability"},
+    {"code": "Title 24", "year": 2022, "full_name": "California Energy Code", "scope": "Energy"},
+    {"code": "CFC", "year": 2022, "full_name": "California Fire Code", "scope": "Fire safety"},
+    {"code": "CEC", "year": 2022, "full_name": "California Electrical Code", "scope": "Electrical"},
+    {"code": "CPC", "year": 2022, "full_name": "California Plumbing Code", "scope": "Plumbing"},
+    {"code": "CMC", "year": 2022, "full_name": "California Mechanical Code", "scope": "Mechanical"}
+  ]
+}

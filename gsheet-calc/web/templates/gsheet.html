@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G010 Project Information — {{ vm.project_info.address }}</title>
+  <style>
+    /* ── Reset + base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 10pt; }
+    body {
+      font-family: "Arial", "Helvetica Neue", Helvetica, sans-serif;
+      background: #fff;
+      color: #000;
+      line-height: 1.35;
+    }
+
+    /* ── Page wrapper ──────────────────────────────────────────────── */
+    .page {
+      max-width: 7.5in;
+      margin: 0 auto;
+      padding: 0.5in;
+    }
+
+    /* ── Sheet header ──────────────────────────────────────────────── */
+    .sheet-header {
+      border-bottom: 2px solid #000;
+      padding-bottom: 6pt;
+      margin-bottom: 10pt;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8pt;
+      align-items: end;
+    }
+    .sheet-header .project-address {
+      font-size: 12pt;
+      font-weight: bold;
+      letter-spacing: 0.01em;
+    }
+    .sheet-header .sheet-title {
+      font-size: 9pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: right;
+    }
+    .sheet-meta {
+      font-size: 8pt;
+      color: #444;
+      margin-top: 2pt;
+    }
+
+    /* ── Section ───────────────────────────────────────────────────── */
+    .section {
+      margin-bottom: 10pt;
+      border: 1px solid #ccc;
+    }
+    .section-header {
+      background: #000;
+      color: #fff;
+      font-size: 8pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 3pt 6pt;
+    }
+
+    /* ── Data table ────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td, th {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 3pt 6pt;
+      vertical-align: top;
+    }
+    tr:last-child td, tr:last-child th {
+      border-bottom: none;
+    }
+    th {
+      font-weight: 600;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #444;
+      background: #f5f5f5;
+      white-space: nowrap;
+    }
+    td {
+      font-size: 9pt;
+    }
+    .label-col {
+      width: 40%;
+      font-size: 8.5pt;
+      color: #444;
+      font-weight: 500;
+    }
+    .value-col {
+      font-size: 9pt;
+      font-weight: normal;
+    }
+
+    /* ── Two-column grid layout ─────────────────────────────────────── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8pt;
+      margin-bottom: 10pt;
+    }
+    .two-col .section {
+      margin-bottom: 0;
+    }
+
+    /* ── Required / Provided / Status columns ───────────────────────── */
+    .req-prov-table th, .req-prov-table td {
+      width: auto;
+    }
+    .req-prov-table .col-label { width: 30%; }
+    .req-prov-table .col-req   { width: 23%; text-align: right; }
+    .req-prov-table .col-prov  { width: 23%; text-align: right; }
+    .req-prov-table .col-status{ width: 24%; text-align: center; }
+
+    /* ── Status indicators ──────────────────────────────────────────── */
+    .status-icon {
+      font-size: 9pt;
+      font-weight: bold;
+    }
+    .s-compliant    { color: #000; }
+    .s-provisional  { color: #555; }
+    .s-noncompliant { color: #000; font-weight: bold; }
+    .s-pending      { color: #888; }
+    .s-unresolved   { color: #aaa; }
+
+    /* ── Flags section ──────────────────────────────────────────────── */
+    .flags-rule {
+      border-top: 3px solid #000;
+      margin: 14pt 0 10pt;
+    }
+    .flags-header {
+      font-size: 10pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6pt;
+    }
+    .flag-list {
+      list-style: none;
+      padding: 0;
+    }
+    .flag-item {
+      display: grid;
+      grid-template-columns: 1.4em 1fr;
+      gap: 4pt;
+      margin-bottom: 5pt;
+      font-size: 8.5pt;
+      border-bottom: 1px solid #e8e8e8;
+      padding-bottom: 5pt;
+    }
+    .flag-item:last-child { border-bottom: none; }
+    .flag-num {
+      font-weight: bold;
+      color: #555;
+      padding-top: 1pt;
+    }
+    .flag-body {}
+    .flag-what { font-weight: 600; }
+    .flag-affects { color: #555; font-size: 8pt; margin-top: 1pt; }
+    .flag-action { font-style: italic; color: #333; margin-top: 1pt; }
+
+    /* ── Footer ─────────────────────────────────────────────────────── */
+    .sheet-footer {
+      border-top: 1px solid #000;
+      margin-top: 14pt;
+      padding-top: 5pt;
+      font-size: 7pt;
+      color: #555;
+      display: grid;
+      grid-template-columns: 1fr auto;
+    }
+
+    /* ── Print media ─────────────────────────────────────────────────── */
+    @media print {
+      html { font-size: 9pt; }
+      body { background: #fff; }
+      .page { margin: 0; padding: 0.5in; max-width: none; }
+      .no-print { display: none !important; }
+
+      /* Page break before flags section */
+      .flags-rule { page-break-before: auto; }
+
+      /* Avoid breaking inside a section */
+      .section { page-break-inside: avoid; }
+      .flag-item { page-break-inside: avoid; }
+
+      @page {
+        size: letter portrait;
+        margin: 0.5in;
+      }
+    }
+
+    /* ── Screen-only nav ─────────────────────────────────────────────── */
+    .screen-nav {
+      background: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+      padding: 8pt 0.5in;
+      font-size: 8.5pt;
+      display: flex;
+      gap: 12pt;
+      align-items: center;
+    }
+    .screen-nav a { color: #2F5496; text-decoration: none; }
+    .screen-nav a:hover { text-decoration: underline; }
+    @media print { .screen-nav { display: none; } }
+  </style>
+</head>
+<body>
+
+  <!-- Screen-only nav -->
+  <div class="screen-nav no-print">
+    <a href="/">&#8592; Back to form</a>
+    <a href="#" onclick="window.print(); return false;">Print / Save PDF</a>
+    <span style="color:#888; flex:1; text-align:right;">Tool v{{ tool_version }} | {{ code_cycle }}</span>
+  </div>
+
+  <div class="page">
+
+    <!-- ── Sheet Header ───────────────────────────────────────────── -->
+    <div class="sheet-header">
+      <div>
+        <div class="project-address">{{ vm.project_info.address }}</div>
+        <div class="sheet-meta">
+          APN: {{ vm.project_info.apn }}
+          &nbsp;|&nbsp; Zone: {{ vm.project_info.zone }}
+          {% if vm.project_info.height_district != "—" %}
+            &nbsp;|&nbsp; HD: {{ vm.project_info.height_district }}
+          {% endif %}
+          &nbsp;|&nbsp; Jurisdiction: {{ vm.project_info.jurisdiction }}
+        </div>
+        {% if vm.metadata.firm_name != "—" %}
+        <div class="sheet-meta">
+          {{ vm.metadata.firm_name }}
+          {% if vm.metadata.project_number != "—" %} &nbsp;|&nbsp; Job No. {{ vm.metadata.project_number }}{% endif %}
+          {% if vm.metadata.issue_date != "—" %} &nbsp;|&nbsp; {{ vm.metadata.issue_date }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div>
+        <div class="sheet-title">Project Information</div>
+        <div class="sheet-title" style="font-weight:normal; letter-spacing:0; text-transform:none; font-size:8pt;">G010</div>
+        <div class="sheet-meta" style="text-align:right;">Path: {{ vm.metadata.selected_path }}</div>
+      </div>
+    </div>
+
+    <!-- ── Row 1: Site Info + Unit Count ──────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Site Information -->
+      <div class="section">
+        <div class="section-header">Site Information</div>
+        <table>
+          <tr><td class="label-col">Address</td><td class="value-col">{{ vm.project_info.address }}</td></tr>
+          <tr><td class="label-col">APN</td><td class="value-col">{{ vm.project_info.apn }}</td></tr>
+          <tr><td class="label-col">Zone</td><td class="value-col">{{ vm.project_info.zone }}</td></tr>
+          <tr><td class="label-col">Height District</td><td class="value-col">{{ vm.project_info.height_district }}</td></tr>
+          <tr><td class="label-col">Lot Area</td><td class="value-col">{{ vm.project_info.lot_area_sf }}</td></tr>
+          <tr><td class="label-col">Community Plan</td><td class="value-col">{{ vm.project_info.community_plan }}</td></tr>
+          <tr><td class="label-col">General Plan</td><td class="value-col">{{ vm.project_info.general_plan }}</td></tr>
+          {% if vm.project_info.specific_plan != "—" %}
+          <tr><td class="label-col">Specific Plan</td><td class="value-col">{{ vm.project_info.specific_plan }}</td></tr>
+          {% endif %}
+          {% if vm.project_info.overlay_zones != "—" %}
+          <tr><td class="label-col">Overlay Zones</td><td class="value-col">{{ vm.project_info.overlay_zones }}</td></tr>
+          {% endif %}
+          {% if vm.project_info.toc_tier != "N/A" %}
+          <tr><td class="label-col">TOC Tier</td><td class="value-col">{{ vm.project_info.toc_tier }}</td></tr>
+          {% endif %}
+          {% if vm.project_info.ab2097_area != "—" %}
+          <tr><td class="label-col">AB 2097 Area</td><td class="value-col">{{ vm.project_info.ab2097_area }}</td></tr>
+          {% endif %}
+        </table>
+      </div>
+
+      <!-- Unit Count -->
+      <div class="section">
+        <div class="section-header">Unit Count</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th style="text-align:right">Count</th>
+              <th style="text-align:right">BR</th>
+              <th style="text-align:right">Avg SF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in vm.unit_count.rows %}
+            <tr>
+              <td>{{ row.type }}</td>
+              <td style="text-align:right">{{ row.count }}</td>
+              <td style="text-align:right">{{ row.bedrooms }}</td>
+              <td style="text-align:right">{{ row.avg_sf }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="color:#888; font-style:italic;">No unit mix entered</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="border-top: 1px solid #aaa;">
+              <td><strong>Total</strong></td>
+              <td style="text-align:right"><strong>{{ vm.unit_count.total_units }}</strong></td>
+              <td style="text-align:right"></td>
+              <td style="text-align:right"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Row 2: FAR + Density ───────────────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Floor Area Ratio -->
+      <div class="section">
+        <div class="section-header">Floor Area Ratio</div>
+        <table>
+          <tr><td class="label-col">Governing Ratio</td><td class="value-col">{{ vm.far.governing_ratio }} <span style="color:#666; font-size:8pt;">({{ vm.far.governing_state }})</span></td></tr>
+          <tr><td class="label-col">Area Basis</td><td class="value-col">{{ vm.far.area_basis }}</td></tr>
+          <tr><td class="label-col">Allowable Floor Area</td><td class="value-col">{{ vm.far.allowable_sf }}</td></tr>
+          <tr><td class="label-col">Proposed Floor Area</td><td class="value-col">{{ vm.far.proposed_sf }}</td></tr>
+          <tr><td class="label-col">Proposed FAR</td><td class="value-col">{{ vm.far.proposed_ratio }}</td></tr>
+          <tr><td class="label-col">Compliance</td>
+            <td class="value-col">
+              {% if vm.far.compliance == "Compliant" %}
+                <span class="status-icon s-compliant">&#10003; Compliant</span>
+              {% elif vm.far.compliance == "Non-compliant" %}
+                <span class="status-icon s-noncompliant">&#10007; Non-compliant</span>
+              {% else %}
+                <span class="status-icon s-pending">&#9866; {{ vm.far.compliance }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+        {% if vm.far.floor_entries %}
+        <table style="border-top: 1px solid #ddd; margin-top:0;">
+          <thead>
+            <tr>
+              <th>Floor</th>
+              <th style="text-align:right">Gross SF</th>
+              <th style="text-align:right">Counted SF</th>
+              <th>Category</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in vm.far.floor_entries %}
+            <tr>
+              <td>{{ e.floor }}</td>
+              <td style="text-align:right">{{ e.gross_sf }}</td>
+              <td style="text-align:right">{{ e.counted_sf }}</td>
+              <td>{{ e.category }}{% if e.exclusion %} — {{ e.exclusion }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+
+      <!-- Density -->
+      <div class="section">
+        <div class="section-header">Density</div>
+        <table>
+          <tr><td class="label-col">Entitlement Path</td><td class="value-col">{{ vm.density.lane }}</td></tr>
+          <tr><td class="label-col">Base Zoning Units</td><td class="value-col">{{ vm.density.baseline_units }}</td></tr>
+          <tr><td class="label-col">Lot Area Used</td><td class="value-col">{{ vm.density.lot_area_used }}</td></tr>
+          <tr><td class="label-col">Density Factor</td><td class="value-col">{{ vm.density.sf_per_du }} sf/du</td></tr>
+          <tr><td class="label-col">Allowed Units</td><td class="value-col"><strong>{{ vm.density.allowed_units }}</strong></td></tr>
+        </table>
+        {% if vm.density.comparisons %}
+        <table style="border-top: 1px solid #ddd; margin-top:0;">
+          <thead><tr><th>Path Comparison</th><th style="text-align:right">Units</th></tr></thead>
+          <tbody>
+            {% for c in vm.density.comparisons %}
+            <tr><td>{{ c.path }}</td><td style="text-align:right">{{ c.units }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Setbacks ───────────────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-header">Setbacks</div>
+      <table class="req-prov-table">
+        <thead>
+          <tr>
+            <th class="col-label">Edge</th>
+            <th class="col-req">Required</th>
+            <th class="col-prov">Provided</th>
+            <th class="col-status">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sb in vm.setbacks %}
+          <tr>
+            <td class="col-label">
+              {{ sb.edge }}
+              {% if sb.notes %}
+                <br><span style="font-size:7.5pt; color:#666; font-style:italic;">&#9888; {{ sb.notes }}</span>
+              {% endif %}
+            </td>
+            <td class="col-req">{{ sb.required }}</td>
+            <td class="col-prov">{{ sb.provided }}</td>
+            <td class="col-status">
+              {% if sb.indicator == "compliant" %}
+                <span class="status-icon s-compliant">&#10003;</span>
+              {% elif sb.indicator == "non_compliant" %}
+                <span class="status-icon s-noncompliant">&#10007;</span>
+              {% elif sb.indicator == "provisional" %}
+                <span class="status-icon s-provisional">&#9888;</span>
+              {% elif sb.indicator == "not_entered" %}
+                <span class="status-icon s-unresolved">&#8212;</span>
+              {% else %}
+                <span class="status-icon s-pending">?</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Row 3: Parking + Open Space ───────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Parking -->
+      <div class="section">
+        <div class="section-header">Parking</div>
+        <table>
+          <tr><td class="label-col">Governing Lane</td><td class="value-col">{{ vm.parking.lane }}</td></tr>
+        </table>
+        <table class="req-prov-table">
+          <thead>
+            <tr>
+              <th class="col-label">Category</th>
+              <th class="col-req">Required</th>
+              <th class="col-prov">Provided</th>
+              <th class="col-status">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">Auto (residential)</td>
+              <td class="col-req">{{ vm.parking.res_required }}</td>
+              <td class="col-prov">{{ vm.parking.auto_provided }}</td>
+              <td class="col-status">
+                {% set req_n = vm.parking.res_required | int if vm.parking.res_required != '—' and vm.parking.res_required != 'Not calculated' else None %}
+                {% set prov_n = vm.parking.auto_provided | int if vm.parking.auto_provided != 'Not entered' and vm.parking.auto_provided != '—' else None %}
+                {% if req_n is not none and prov_n is not none %}
+                  {% if prov_n >= req_n %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}
+                {% elif vm.parking.auto_provided == 'Not entered' %}
+                  <span class="status-icon s-unresolved">&#8212;</span>
+                {% else %}
+                  <span class="status-icon s-pending">&#9866;</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% if vm.parking.com_required != "N/A" %}
+            <tr>
+              <td class="col-label">Auto (commercial)</td>
+              <td class="col-req">{{ vm.parking.com_required }}</td>
+              <td class="col-prov">—</td>
+              <td class="col-status"><span class="status-icon s-pending">&#9866;</span></td>
+            </tr>
+            {% endif %}
+            <tr>
+              <td class="col-label">Accessible</td>
+              <td class="col-req">{{ vm.parking.accessible_required }}</td>
+              <td class="col-prov">{{ vm.parking.accessible_provided }}</td>
+              <td class="col-status">
+                {% set rn = vm.parking.accessible_required | int if vm.parking.accessible_required != '—' and vm.parking.accessible_required != 'Not calculated' else None %}
+                {% set pn = vm.parking.accessible_provided | int if vm.parking.accessible_provided != 'Not entered' and vm.parking.accessible_provided != '—' else None %}
+                {% if rn is not none and pn is not none %}
+                  {% if pn >= rn %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}
+                {% else %}
+                  <span class="status-icon s-unresolved">&#8212;</span>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Open Space -->
+      <div class="section">
+        <div class="section-header">Open Space</div>
+        <table class="req-prov-table">
+          <thead>
+            <tr>
+              <th class="col-label">Item</th>
+              <th class="col-req">Required</th>
+              <th class="col-prov">Provided</th>
+              <th class="col-status">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">Private / common open space</td>
+              <td class="col-req">{{ vm.open_space.required_sf }}</td>
+              <td class="col-prov">{{ vm.open_space.provided_sf }}</td>
+              <td class="col-status">
+                {% if vm.open_space.status == "compliant" %}
+                  <span class="status-icon s-compliant">&#10003;</span>
+                {% elif vm.open_space.status == "non_compliant" %}
+                  <span class="status-icon s-noncompliant">&#10007;</span>
+                {% elif vm.open_space.status == "pending" %}
+                  <span class="status-icon s-provisional">&#9888;</span>
+                {% else %}
+                  <span class="status-icon s-unresolved">&#8212;</span>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        {% if vm.open_space.basis != "—" %}
+        <div style="padding: 3pt 6pt; font-size:7.5pt; color:#666; border-top:1px solid #eee;">
+          Basis: {{ vm.open_space.basis }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Row 4: Bike + EV ───────────────────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Bicycle Parking -->
+      <div class="section">
+        <div class="section-header">Bicycle Parking</div>
+        <table class="req-prov-table">
+          <thead>
+            <tr>
+              <th class="col-label">Type</th>
+              <th class="col-req">Required</th>
+              <th class="col-prov">Provided</th>
+              <th class="col-status">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">Long-term (secured)</td>
+              <td class="col-req">{{ vm.bike_parking.long_term_required }}</td>
+              <td class="col-prov">{{ vm.bike_parking.long_term_provided }}</td>
+              <td class="col-status">
+                {% set r = vm.bike_parking.long_term_required | int if vm.bike_parking.long_term_required not in ('—','Not calculated') else None %}
+                {% set p = vm.bike_parking.long_term_provided | int if vm.bike_parking.long_term_provided not in ('Not entered','—') else None %}
+                {% if r is not none and p is not none %}{% if p >= r %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}{% else %}<span class="status-icon s-unresolved">&#8212;</span>{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td class="col-label">Short-term (visitor)</td>
+              <td class="col-req">{{ vm.bike_parking.short_term_required }}</td>
+              <td class="col-prov">{{ vm.bike_parking.short_term_provided }}</td>
+              <td class="col-status">
+                {% set r = vm.bike_parking.short_term_required | int if vm.bike_parking.short_term_required not in ('—','Not calculated') else None %}
+                {% set p = vm.bike_parking.short_term_provided | int if vm.bike_parking.short_term_provided not in ('Not entered','—') else None %}
+                {% if r is not none and p is not none %}{% if p >= r %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}{% else %}<span class="status-icon s-unresolved">&#8212;</span>{% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- EV Charging -->
+      <div class="section">
+        <div class="section-header">EV Charging</div>
+        <table class="req-prov-table">
+          <thead>
+            <tr>
+              <th class="col-label">Type</th>
+              <th class="col-req">Required</th>
+              <th class="col-prov">Provided</th>
+              <th class="col-status">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-label">EV Receptacles (EVRC)</td>
+              <td class="col-req">{{ vm.ev.receptacles_required }}</td>
+              <td class="col-prov">{{ vm.ev.receptacles_provided }}</td>
+              <td class="col-status">
+                {% set r = vm.ev.receptacles_required | int if vm.ev.receptacles_required not in ('—','Not calculated') else None %}
+                {% set p = vm.ev.receptacles_provided | int if vm.ev.receptacles_provided not in ('Not entered','—') else None %}
+                {% if r is not none and p is not none %}{% if p >= r %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}{% else %}<span class="status-icon s-unresolved">&#8212;</span>{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td class="col-label">EVSE (Level 2 ready)</td>
+              <td class="col-req">{{ vm.ev.evse_required }}</td>
+              <td class="col-prov">{{ vm.ev.evse_provided }}</td>
+              <td class="col-status">
+                {% set r = vm.ev.evse_required | int if vm.ev.evse_required not in ('—','Not calculated') else None %}
+                {% set p = vm.ev.evse_provided | int if vm.ev.evse_provided not in ('Not entered','—') else None %}
+                {% if r is not none and p is not none %}{% if p >= r %}<span class="status-icon s-compliant">&#10003;</span>{% else %}<span class="status-icon s-noncompliant">&#10007;</span>{% endif %}{% else %}<span class="status-icon s-unresolved">&#8212;</span>{% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding: 3pt 6pt; font-size:7.5pt; color:#666; border-top:1px solid #eee;">
+          Authority: {{ vm.ev.authority }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Loading + Incentives ──────────────────────────────────── -->
+    <div class="two-col">
+
+      <!-- Loading -->
+      <div class="section">
+        <div class="section-header">Loading</div>
+        <table>
+          <tr><td class="label-col">Required</td><td class="value-col">{{ vm.loading.required }}</td></tr>
+          <tr><td class="label-col">Basis</td><td class="value-col">{{ vm.loading.basis }}</td></tr>
+        </table>
+      </div>
+
+      <!-- Incentives / Waivers -->
+      <div class="section">
+        <div class="section-header">Incentives / Waivers</div>
+        <table>
+          {% for item in vm.incentives %}
+          <tr><td style="font-size:8.5pt;">{{ item }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Entitlements + Legal Description ─────────────────────── -->
+    {% if vm.entitlements != "—" or vm.legal_description != "—" %}
+    <div class="two-col">
+      {% if vm.entitlements != "—" %}
+      <div class="section">
+        <div class="section-header">Entitlements</div>
+        <div style="padding: 4pt 6pt; font-size:8.5pt; white-space:pre-wrap;">{{ vm.entitlements }}</div>
+      </div>
+      {% endif %}
+      {% if vm.legal_description != "—" %}
+      <div class="section">
+        <div class="section-header">Legal Description</div>
+        <div style="padding: 4pt 6pt; font-size:8.5pt; white-space:pre-wrap;">{{ vm.legal_description }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── Governing Codes ───────────────────────────────────────── -->
+    <div class="section">
+      <div class="section-header">Governing Codes</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Year</th>
+            <th>Full Name</th>
+            <th>Scope</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in vm.building_codes %}
+          <tr>
+            <td style="font-weight:600;">{{ c.code }}</td>
+            <td>{{ c.year }}</td>
+            <td>{{ c.full_name }}</td>
+            <td style="color:#555;">{{ c.scope }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         G-FLAGS: Open Items + Provisional Assumptions
+         ══════════════════════════════════════════════════════════════ -->
+    <div class="flags-rule"></div>
+
+    <div class="flags-header">G-Flags — Open Items &amp; Provisional Assumptions</div>
+    <div style="font-size:8pt; color:#555; margin-bottom:6pt;">
+      Items below are missing, provisional, or assumed. Each must be resolved before this sheet can be issued for review.
+    </div>
+
+    {% if vm.flags %}
+    <ol class="flag-list">
+      {% for flag in vm.flags %}
+      <li class="flag-item">
+        <span class="flag-num">{{ loop.index }}.</span>
+        <div class="flag-body">
+          <div class="flag-what">{{ flag.what }}</div>
+          <div class="flag-affects">Affects: {{ flag.affects }}</div>
+          <div class="flag-action">&#8594; {{ flag.action }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p style="font-size:8.5pt; color:#555; font-style:italic;">No open flags — all required inputs entered and all results confirmed.</p>
+    {% endif %}
+
+    <!-- ── Status legend ─────────────────────────────────────────── -->
+    <div style="margin-top:10pt; padding:4pt 0; border-top:1px solid #e0e0e0; font-size:7.5pt; color:#666;">
+      <strong>Status indicators:</strong>&nbsp;
+      <span class="status-icon s-compliant">&#10003;</span> Compliant &nbsp;|&nbsp;
+      <span class="status-icon s-noncompliant">&#10007;</span> Non-compliant &nbsp;|&nbsp;
+      <span class="status-icon s-provisional">&#9888;</span> Provisional / assumed &nbsp;|&nbsp;
+      <span class="status-icon s-unresolved">&#8212;</span> Not entered
+    </div>
+
+    <!-- ── Sheet footer ──────────────────────────────────────────── -->
+    <div class="sheet-footer">
+      <div>Preliminary internal analysis. Not for final code determination without professional review.</div>
+      <div>Tool v{{ tool_version }} | {{ code_cycle }}</div>
+    </div>
+
+  </div><!-- .page -->
+</body>
+</html>
