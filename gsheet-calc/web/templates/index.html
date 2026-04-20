@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KFA Feasibility Tool</title>
+  <title>KFA G-Sheet Calculator</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
@@ -68,8 +68,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>KFA Feasibility Tool</h1>
-    <p class="subtitle">First-pass zoning feasibility for LA multifamily projects</p>
+    <h1>KFA G-Sheet Calculator</h1>
+    <p class="subtitle">Code compliance calculations for LA multifamily projects</p>
 
     {% if error %}
     <div class="error">{{ error }}</div>
@@ -325,30 +325,6 @@
         </div>
       </div>
 
-      <!-- 5. Parking Strategy -->
-      <div class="card">
-        <h2>Parking Strategy</h2>
-        <p class="section-note">Select your expected parking approach. This helps frame parking-related feasibility outputs.</p>
-        <div class="parking-options">
-          <div class="parking-option">
-            <input type="radio" id="park_none" name="parking_strategy" value="none" {{ 'checked' if not request.form.get('parking_strategy') or request.form.get('parking_strategy') == 'none' }}>
-            <label for="park_none">Undecided / Assume minimum</label>
-          </div>
-          <div class="parking-option">
-            <input type="radio" id="park_surface" name="parking_strategy" value="surface" {{ 'checked' if request.form.get('parking_strategy') == 'surface' }}>
-            <label for="park_surface">Surface</label>
-          </div>
-          <div class="parking-option">
-            <input type="radio" id="park_podium" name="parking_strategy" value="podium" {{ 'checked' if request.form.get('parking_strategy') == 'podium' }}>
-            <label for="park_podium">Podium</label>
-          </div>
-          <div class="parking-option">
-            <input type="radio" id="park_sub" name="parking_strategy" value="subterranean" {{ 'checked' if request.form.get('parking_strategy') == 'subterranean' }}>
-            <label for="park_sub">Subterranean</label>
-          </div>
-        </div>
-      </div>
-
       <!-- Advanced Assumptions -->
       <div class="card">
         <div class="advanced-toggle" id="advancedToggle" onclick="toggleAdvanced()">
@@ -391,39 +367,14 @@
             </div>
           </div>
 
-          <!-- Policy-specific fields (conditional on entitlement path) -->
-          <div class="form-row" id="advancedPolicyRow">
-            <div class="form-group checkbox-group" id="prevailingWageGroup">
-              <input type="checkbox" id="prevailing_wage" name="prevailing_wage" value="true" {{ 'checked' if request.form.get('prevailing_wage') }}>
-              <label for="prevailing_wage" style="font-size: 0.82rem;">Prevailing wage committed</label>
-            </div>
-            <div class="form-group checkbox-group" id="commercialCorridorGroup">
-              <input type="checkbox" id="commercial_corridor" name="commercial_corridor" value="true" {{ 'checked' if request.form.get('commercial_corridor') }}>
-              <label for="commercial_corridor" style="font-size: 0.82rem;">Commercial corridor frontage (AB 2011)</label>
-            </div>
-          </div>
         </div>
       </div>
 
       <div class="submit-row">
-        <button type="submit" class="submit-btn" id="submitBtn">
-          <span class="btn-text">Run Feasibility Analysis</span>
-          <span class="spinner">Analyzing... (geocoding + ZIMAS query may take a few seconds)</span>
+        <button type="submit" formaction="/gsheet" class="submit-btn" id="gsheetBtn">
+          <span class="btn-text">Generate G-Sheet</span>
+          <span class="spinner">Generating... (geocoding + ZIMAS query may take a few seconds)</span>
         </button>
-        <div style="margin-top: 12px;">
-          <button type="submit" formaction="/gsheet" class="submit-btn" id="gsheetBtn" style="background: #1a3d1a; color: #fff; border: none; padding: 14px 40px;">
-            <span class="btn-text">Generate G-Sheet</span>
-            <span class="spinner">Generating... (geocoding + ZIMAS query may take a few seconds)</span>
-          </button>
-          <div style="font-size: 0.72rem; color: #888; margin-top: 4px;">Print-ready G010 Project Information sheet. Requires project inputs above.</div>
-        </div>
-        <div style="margin-top: 12px;">
-          <button type="submit" formaction="/run-address" class="submit-btn" id="addressOnlyBtn" style="background: #fff; color: #2F5496; border: 1px solid #2F5496; padding: 10px 32px; font-size: 0.88rem;">
-            <span class="btn-text">Address-Only Screening</span>
-            <span class="spinner">Screening... (geocoding + ZIMAS query may take a few seconds)</span>
-          </button>
-          <div style="font-size: 0.72rem; color: #888; margin-top: 4px;">No project inputs needed. Shows site-derived feasibility snapshot with scenario comparison.</div>
-        </div>
       </div>
     </form>
 
@@ -433,7 +384,7 @@
   <script>
     // Form submit loading state
     document.getElementById('calcForm').addEventListener('submit', function(e) {
-      var clicked = e.submitter || document.getElementById('submitBtn');
+      var clicked = e.submitter || document.getElementById('gsheetBtn');
       clicked.disabled = true;
       clicked.classList.add('loading');
     });

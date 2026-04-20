@@ -95,10 +95,6 @@ def _build_project_from_form(form) -> Project:
         market_pct=max(0, 100 - eli - vli - li - moderate),
     ) if has_affordability else None
 
-    # Parking strategy
-    parking_strategy = form.get("parking_strategy", "none")
-    parking_subterranean = parking_strategy == "subterranean"
-
     hundred_pct_affordable = True if form.get("hundred_pct_affordable") else False
 
     # Entitlement path (radio: base_zoning / density_bonus / affordable_100)
@@ -126,7 +122,7 @@ def _build_project_from_form(form) -> Project:
         unit_mix=unit_mix,
         occupancy_areas=occupancy_areas,
         parking_spaces_total=_int_or_none(form.get("parking_total")),
-        parking_subterranean=parking_subterranean or None,
+        parking_subterranean=None,
         dedication_street_ft=_float_or(form.get("ded_street")),
         dedication_alley_ft=_float_or(form.get("ded_alley")),
         corner_cuts_sf=_float_or(form.get("corner_cuts")),
@@ -134,8 +130,6 @@ def _build_project_from_form(form) -> Project:
         alley_width_ft=_float_or(form.get("alley_width")),
         alley_frontage_length_ft=_float_or(form.get("alley_frontage")),
         affordability=affordability,
-        prevailing_wage_committed=True if form.get("prevailing_wage") == "true" else None,
-        commercial_corridor_frontage=True if form.get("commercial_corridor") == "true" else None,
         hundred_pct_affordable=hundred_pct_affordable,
     )
 
